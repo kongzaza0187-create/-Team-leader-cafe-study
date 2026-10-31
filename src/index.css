@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0B0B0C;
+  --bg-secondary: #121214;
+  --surface-card: #1A1A1E;
+  --surface-elevated: #222228;
+  --accent-orange: #FF6B00;
+  --accent-orange-hover: #FF8C33;
+  --status-green: #10B981;
+  --status-red: #EF4444;
+}
+
+body {
+  background-color: #0B0B0C;
+  color: #F4F4F5;
+  font-family: 'Prompt', 'Plus Jakarta Sans', sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer utilities {
+  .bg-cafe-black {
+    background-color: #0B0B0C;
+  }
+  .bg-cafe-black-soft {
+    background-color: #121214;
+  }
+  .bg-cafe-card {
+    background-color: #1A1A1E;
+  }
+  .bg-cafe-elevated {
+    background-color: #222228;
+  }
+  .border-cafe-border {
+    border-color: #282830;
+  }
+  .border-cafe-orange {
+    border-color: #FF6B00;
+  }
+  .text-cafe-orange {
+    color: #FF6B00;
+  }
+  .text-cafe-orange-light {
+    color: #FF8C33;
+  }
+  .bg-cafe-orange {
+    background-color: #FF6B00;
+  }
+  .bg-cafe-orange-light {
+    background-color: #FF8C33;
+  }
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Tactile Embossed / Neumorphic 3D Action Buttons with Glow Effect */
+  .btn-tactile-orange {
+    background: linear-gradient(180deg, #FF7A1A 0%, #FF6B00 100%);
+    color: #0B0B0C;
+    font-weight: 700;
+    box-shadow: 0 4px 0 #b34a00, 0 6px 16px rgba(255, 107, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    border: 1px solid #FF8C33;
+    transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-tactile-orange:hover {
+    background: linear-gradient(180deg, #FF8C33 0%, #FF730A 100%);
+    box-shadow: 0 4px 0 #b34a00, 0 8px 22px rgba(255, 107, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+  .btn-tactile-orange:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #b34a00, 0 2px 10px rgba(255, 107, 0, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-tactile-dark {
+    background: linear-gradient(180deg, #26262e 0%, #1a1a1e 100%);
+    color: #F4F4F5;
+    font-weight: 600;
+    box-shadow: 0 3px 0 #121214, 0 4px 12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: 1px solid #32323c;
+    transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-tactile-dark:hover {
+    background: linear-gradient(180deg, #2e2e38 0%, #222228 100%);
+    border-color: #FF6B00;
+    box-shadow: 0 3px 0 #121214, 0 0 12px rgba(255, 107, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+  .btn-tactile-dark:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #121214, 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Available Table 3D Embossed Tactile Card & Glowing Badge */
+  .card-tactile-available {
+    background: linear-gradient(180deg, #1A1A20 0%, #131317 100%);
+    border: 1px solid #2C2C36;
+    box-shadow: 0 4px 0 #0C0C10, 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card-tactile-available:hover {
+    border-color: #10B981;
+    box-shadow: 0 4px 0 #0C0C10, 0 0 18px rgba(16, 185, 129, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+  .card-tactile-available:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #0C0C10, 0 2px 6px rgba(0, 0, 0, 0.6);
+  }
+
+  .badge-tactile-available {
+    background: linear-gradient(180deg, #13422A 0%, #0B291A 100%);
+    color: #10B981;
+    border: 1px solid #10B981;
+    box-shadow: 0 2px 0 #061910, 0 0 12px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    font-weight: 700;
+  }
+
+  /* Occupied Table Sunken / Muted Dark State */
+  .card-sunken-occupied {
+    background-color: #0E0E11;
+    border: 1px solid #1C1C22;
+    opacity: 0.65;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  }
+
+  .badge-sunken-occupied {
+    background: #141418;
+    color: #71717A;
+    border: 1px solid #222228;
+    font-weight: 500;
+  }
+
+  /* High-Contrast Hero Header with Premium Amber/Orange Edge Glow */
+  .header-hero-glow {
+    background: linear-gradient(135deg, #181512 0%, #0E0E12 100%);
+    border: 1.5px solid #FF6B00;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.7), 0 0 24px rgba(255, 107, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  /* Refined Neumorphic Embossed Top Bar & Interactive Tactile Pills */
+  .topbar-neumorphic {
+    background: linear-gradient(180deg, #19191E 0%, #0F0F12 100%);
+    border-bottom: 1px solid #2A2A34;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .pill-embossed-dark {
+    background: linear-gradient(180deg, #22222A 0%, #16161B 100%);
+    border: 1px solid #2E2E3A;
+    box-shadow: 0 2px 0 #0A0A0D, 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .pill-embossed-dark:hover {
+    border-color: #3E3E4E;
+    box-shadow: 0 2px 0 #0A0A0D, 0 4px 12px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .pill-embossed-dark:active {
+    transform: translateY(1.5px);
+    box-shadow: 0 0.5px 0 #0A0A0D, inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  }
+
+  .pill-embossed-active {
+    background: linear-gradient(180deg, #2A170A 0%, #1A0D05 100%);
+    border: 1px solid #FF6B00;
+    box-shadow: 0 2px 0 #120703, 0 0 14px rgba(255, 107, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .pill-embossed-active:hover {
+    box-shadow: 0 2px 0 #120703, 0 0 18px rgba(255, 107, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .pill-embossed-active:active {
+    transform: translateY(1.5px);
+    box-shadow: 0 0.5px 0 #120703, inset 0 1px 4px rgba(0, 0, 0, 0.7);
+  }
+}
+
