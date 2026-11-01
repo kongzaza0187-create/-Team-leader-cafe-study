@@ -7,7 +7,7 @@
   --surface-elevated: #222228;
   --accent-orange: #FF6B00;
   --accent-orange-hover: #FF8C33;
-  --status-green: #10B981;
+  --status-green: #34D399;
   --status-red: #EF4444;
 }
 
@@ -99,16 +99,16 @@ body {
     box-shadow: 0 1px 0 #121214, 0 2px 6px rgba(0, 0, 0, 0.7);
   }
 
-  /* Available Table 3D Embossed Tactile Card & Glowing Badge */
+  /* Available Table 3D Embossed Tactile Card & Quiet Luxury Emerald Badge */
   .card-tactile-available {
-    background: linear-gradient(180deg, #1A1A20 0%, #131317 100%);
-    border: 1px solid #2C2C36;
+    background: linear-gradient(180deg, #18191E 0%, #121316 100%);
+    border: 1px solid #282A32;
     box-shadow: 0 4px 0 #0C0C10, 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .card-tactile-available:hover {
-    border-color: #10B981;
-    box-shadow: 0 4px 0 #0C0C10, 0 0 18px rgba(16, 185, 129, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    border-color: #1E432E;
+    box-shadow: 0 4px 0 #0C0C10, 0 0 18px rgba(52, 211, 153, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
   .card-tactile-available:active {
     transform: translateY(2px);
@@ -116,10 +116,10 @@ body {
   }
 
   .badge-tactile-available {
-    background: linear-gradient(180deg, #13422A 0%, #0B291A 100%);
-    color: #10B981;
-    border: 1px solid #10B981;
-    box-shadow: 0 2px 0 #061910, 0 0 12px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    background: linear-gradient(180deg, #122419 0%, #0A160F 100%);
+    color: #34D399;
+    border: 1px solid #1E432E;
+    box-shadow: 0 2px 0 #050D08, 0 0 12px rgba(52, 211, 153, 0.25), inset 0 1px 0 rgba(255, 235, 200, 0.15);
     font-weight: 700;
   }
 

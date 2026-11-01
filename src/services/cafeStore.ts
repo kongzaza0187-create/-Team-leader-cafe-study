@@ -167,7 +167,37 @@ class CafeStoreManager {
     this.restoreDeviceSessionIfPresent();
     this.startMetricsSimulation();
     this.startBotSimulation();
+    this.fetchTablesFromServer();
     this.initSSEConnection();
+  }
+
+  /**
+   * Fetch current table snapshot directly from HTTP API (Single Source of Truth)
+   */
+  public async fetchTablesFromServer(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    try {
+      const res = await fetch('/api/v1/tables');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && Array.isArray(data.tables)) {
+        data.tables.forEach((serverTable: any) => {
+          const idx = this.tables.findIndex((t) => t.tableId === serverTable.tableId);
+          if (idx !== -1) {
+            const isMyTable = this.activeSession?.tableId === serverTable.tableId;
+            this.tables[idx] = {
+              ...this.tables[idx],
+              status: serverTable.status,
+              currentSessionId: isMyTable ? this.activeSession?.sessionId : serverTable.currentSessionId,
+              currentSecretCode: isMyTable ? this.activeSession?.secretCode : serverTable.currentSecretCode,
+            };
+          }
+        });
+        this.notifyListeners();
+      }
+    } catch {
+      // offline fallback
+    }
   }
 
   /**
@@ -177,46 +207,68 @@ class CafeStoreManager {
   private initSSEConnection() {
     if (typeof window === 'undefined' || !window.EventSource) return;
 
-    try {
-      this.eventSource = new EventSource('/api/v1/stream');
+    if (typeof window !== 'undefined') {
+      window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          this.fetchTablesFromServer();
+        }
+      });
+      window.addEventListener('focus', () => {
+        this.fetchTablesFromServer();
+      });
+    }
 
-      this.eventSource.addEventListener('table_snapshot', (e: MessageEvent) => {
-        try {
-          const snapshot = JSON.parse(e.data);
-          if (Array.isArray(snapshot)) {
-            snapshot.forEach((snapTable: any) => {
-              const idx = this.tables.findIndex((t) => t.tableId === snapTable.tableId);
-              if (idx !== -1) {
-                if (!this.activeSession || this.activeSession.tableId !== snapTable.tableId) {
+    const connectSSE = () => {
+      try {
+        if (this.eventSource) {
+          this.eventSource.close();
+        }
+        this.eventSource = new EventSource('/api/v1/stream');
+
+        this.eventSource.addEventListener('table_snapshot', (e: MessageEvent) => {
+          try {
+            const snapshot = JSON.parse(e.data);
+            if (Array.isArray(snapshot)) {
+              snapshot.forEach((snapTable: any) => {
+                const idx = this.tables.findIndex((t) => t.tableId === snapTable.tableId);
+                if (idx !== -1) {
+                  const isMyTable = this.activeSession?.tableId === snapTable.tableId;
                   this.tables[idx] = {
                     ...this.tables[idx],
                     status: snapTable.status,
-                    currentSessionId: snapTable.currentSessionId,
-                    currentSecretCode: snapTable.currentSecretCode,
+                    currentSessionId: isMyTable ? this.activeSession?.sessionId : snapTable.currentSessionId,
+                    currentSecretCode: isMyTable ? this.activeSession?.secretCode : snapTable.currentSecretCode,
                   };
                 }
-              }
-            });
-            this.notifyListeners();
-          }
-        } catch {
-          // ignore
-        }
-      });
+              });
+              this.notifyListeners();
+            }
+          } catch {}
+        });
 
-      this.eventSource.addEventListener('table_updates', (e: MessageEvent) => {
-        try {
-          const update = JSON.parse(e.data);
-          if (update && update.tableId) {
-            this.handleRemoteTableUpdate(update);
+        this.eventSource.addEventListener('table_updates', (e: MessageEvent) => {
+          try {
+            const update = JSON.parse(e.data);
+            if (update && update.tableId) {
+              this.handleRemoteTableUpdate(update);
+            }
+          } catch {}
+        });
+
+        this.eventSource.onerror = () => {
+          if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
           }
-        } catch {
-          // ignore
-        }
-      });
-    } catch {
-      // offline / dev mode
-    }
+          // Reconnect with exponential retry
+          setTimeout(connectSSE, 3000);
+        };
+      } catch {
+        setTimeout(connectSSE, 4000);
+      }
+    };
+
+    connectSSE();
   }
 
   private handleRemoteTableUpdate(payload: {
@@ -248,21 +300,21 @@ class CafeStoreManager {
   private broadcastTableChange(tableId: string, status: string, sessionId?: string, secretCode?: string) {
     if (typeof window === 'undefined') return;
     try {
-      fetch('/api/v1/tables/update', {
+      const endpoint = status === 'OCCUPIED' ? '/api/v1/tables/occupy' : '/api/v1/tables/release';
+      fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tableId,
           status,
-          currentSessionId: sessionId,
-          currentSecretCode: secretCode,
+          sessionId,
+          secretCode,
+          deviceFingerprint: this.deviceFingerprint,
         }),
       }).catch(() => {
         // Fallback for dev/mock mode
       });
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
   /**
@@ -764,6 +816,9 @@ class CafeStoreManager {
       const revokedSecretCode = this.activeSession.secretCode;
 
       // 1. Mark Transaction as SETTLED and attach bank slip proof
+      const cartSnapshot = [...this.cartItems];
+      const totalUnits = cartSnapshot.reduce((sum, item) => sum + item.quantity, 0);
+
       const settledTx: PromptPayTransaction = {
         ...this.currentTransaction,
         status: 'SETTLED',
@@ -771,6 +826,8 @@ class CafeStoreManager {
         senderBank: slipResult.senderBank,
         settledAt: new Date().toISOString(),
         isBot: false, // Genuine verified customer transaction
+        items: cartSnapshot,
+        totalUnits: totalUnits > 0 ? totalUnits : 1,
       };
 
       // Real-time addition to settled transactions and admin revenue

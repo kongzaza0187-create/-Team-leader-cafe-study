@@ -1,6 +1,6 @@
 {
-  "name": "Lumina 24h Study & Coffee Cafe",
-  "description": "24-Hour Study & Coffee Cafe Mobile Platform with cryptographic table sessions, high-concurrency architecture, and EMVCo PromptPay QR automated slip verification.",
+  "name": "Study Café 24/7",
+  "description": "24-Hour Study & Coffee Cafe Mobile & Tablet Platform with cryptographic table sessions, high-concurrency architecture, and EMVCo PromptPay QR automated slip verification.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

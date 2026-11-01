@@ -12,6 +12,9 @@ import { CafeTable, TableSession } from '../types';
 import { CanvasIcon } from './CanvasIcon';
 import { audioFeedbackService } from '../services/audioFeedbackService';
 import { CanvasAnimatedCheckmark } from './CanvasAnimatedCheckmark';
+import { TableGridSystem } from './TableGridSystem';
+import { TABLE_ICON_AVAILABLE_BASE64 } from '../data/tableIconBase64';
+import { APP_LOGO_BASE64 } from '../data/appLogoBase64';
 
 interface Props {
   tables: CafeTable[];
@@ -104,19 +107,31 @@ export const TableSelectionScreen: React.FC<Props> = ({
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6B00]/10 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10"></div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
-          <div className="space-y-1">
-            <h1 className="text-base sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              <span>เลือกโต๊ะทำงาน & ตะกร้าสินค้า</span>
-            </h1>
-            <p className="text-xs text-stone-300">
-              แตะโต๊ะที่ว่างเพื่อเริ่มต้นใช้งานและรับรหัสลับ 6 หลัก
-            </p>
+          <div className="flex items-center gap-3">
+            <img
+              src={APP_LOGO_BASE64}
+              alt="Study Café 24/7"
+              className="h-16 sm:h-20 w-auto max-w-[130px] sm:max-w-[160px] object-contain filter drop-shadow-xl flex-shrink-0 hover:scale-105 transition-transform"
+            />
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black text-white tracking-tight">
+                  Study Café 24/7
+                </h1>
+                <span className="text-[10px] font-mono text-[#FF6B00] bg-[#FF6B00]/15 px-2 py-0.2 rounded-full border border-[#FF6B00]/30 font-bold">
+                  20 โต๊ะ
+                </span>
+              </div>
+              <p className="text-xs text-stone-300">
+                แตะโต๊ะที่ว่างเพื่อเริ่มต้นใช้งานและรับรหัสลับ 6 หลัก
+              </p>
+            </div>
           </div>
 
           {/* Consolidated Single Status Pill (Zero Redundancy) */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 self-start sm:self-auto">
             <div className="badge-tactile-available px-3 py-1.5 rounded-2xl inline-flex items-center gap-2 text-xs font-mono">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse"></span>
               <span>ว่าง {availableCount} / {safeTables.length}</span>
             </div>
           </div>
@@ -178,92 +193,13 @@ export const TableSelectionScreen: React.FC<Props> = ({
         })}
       </div>
 
-      {/* Responsive Table Cards Grid (Native click handling, zero pointer capture bugs) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pb-6">
-        {filteredTables.map((table) => {
-          const isMyTable = activeSession?.tableId === table.tableId;
-          const isOccupied = table.status === 'OCCUPIED' && !isMyTable;
-          const isAvailable = table.status === 'AVAILABLE';
-
-          return (
-            <div
-              key={table.tableId}
-              onClick={() => handleTableClick(table)}
-              className={`p-3.5 sm:p-4 rounded-2xl transition-all text-left relative overflow-hidden min-h-[96px] active:scale-[0.98] ${
-                isMyTable
-                  ? 'bg-[#1C1814] border-2 border-[#FF6B00] shadow-[0_0_20px_rgba(255,107,0,0.3)] cursor-pointer'
-                  : isAvailable
-                  ? 'card-tactile-available cursor-pointer'
-                  : 'card-sunken-occupied cursor-not-allowed'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2 pointer-events-none">
-                {/* Left: Table Identifier & Info */}
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono font-black text-sm flex-shrink-0 ${
-                      isMyTable
-                        ? 'bg-[#FF6B00] text-stone-950 shadow-md shadow-[#FF6B00]/40'
-                        : isAvailable
-                        ? 'bg-[#121216] text-[#10B981] border border-[#10B981]/40 shadow-inner'
-                        : 'bg-[#16161A] text-stone-600 border border-[#222228]'
-                    }`}
-                  >
-                    {table.tableId}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h3 className={`text-xs font-bold truncate ${isAvailable ? 'text-stone-100' : isMyTable ? 'text-[#FF8C33]' : 'text-stone-400'}`}>
-                        {table.name}
-                      </h3>
-                      {isMyTable && (
-                        <span className="px-1.5 py-0.2 rounded bg-[#FF6B00]/25 text-[#FF6B00] text-[9px] font-bold border border-[#FF6B00]/40">
-                          โต๊ะของคุณ
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-stone-400 flex items-center gap-1 mt-0.5 truncate">
-                      <CanvasIcon name="map-pin" size={10} color={isAvailable ? '#A1A1AA' : '#52525B'} />
-                      <span>{table.zone}</span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right: Tactile Status Badges & Specs */}
-                <div className="text-right flex items-center gap-1.5 flex-shrink-0">
-                  <div>
-                    {isMyTable ? (
-                      <span className="btn-tactile-orange inline-block px-2.5 py-1 rounded-xl text-[10px] font-bold">
-                        กำลังใช้งาน
-                      </span>
-                    ) : isAvailable ? (
-                      <span className="badge-tactile-available inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
-                        <span>ว่างพร้อมใช้</span>
-                      </span>
-                    ) : (
-                      <span className="badge-sunken-occupied inline-block px-2 py-1 rounded-xl text-[10px]">
-                        มีผู้ใช้งาน
-                      </span>
-                    )}
-
-                    <span className="text-[10px] text-stone-400 block font-mono mt-1">
-                      {table.socketCount} ปลั๊ก • {table.capacity} ที่
-                    </span>
-                  </div>
-
-                  {isAvailable && (
-                    <div className="pl-0.5 text-[#10B981]">
-                      <CanvasIcon name="chevron-right" size={14} color="#10B981" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Responsive 20-Table Grid with Instant Base64 Status Icon Switching */}
+      <TableGridSystem
+        tables={filteredTables}
+        activeSession={activeSession}
+        onTableSelect={handleTableClick}
+        variant="mobile"
+      />
 
       {/* Check-in Confirmation Modal */}
       {confirmingTable && (

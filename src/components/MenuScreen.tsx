@@ -12,6 +12,7 @@ import { MenuItem, CartItem, CoffeeTemperature, SweetnessLevel, MilkOption, Tabl
 import { MENU_CATEGORIES, MENU_ITEMS } from '../data/menuData';
 import { CanvasIcon } from './CanvasIcon';
 import { audioFeedbackService } from '../services/audioFeedbackService';
+import { APP_LOGO_BASE64 } from '../data/appLogoBase64';
 
 interface Props {
   activeSession: TableSession | null;
@@ -19,6 +20,7 @@ interface Props {
   onNavigateToTables: () => void;
   onOpenCart: () => void;
   cartCount: number;
+  onCustomizerStateChange?: (isOpen: boolean) => void;
 }
 
 export const MenuScreen: React.FC<Props> = ({
@@ -27,6 +29,7 @@ export const MenuScreen: React.FC<Props> = ({
   onNavigateToTables,
   onOpenCart,
   cartCount,
+  onCustomizerStateChange,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('coffee');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -40,6 +43,12 @@ export const MenuScreen: React.FC<Props> = ({
   const [hasExtraShot, setHasExtraShot] = useState<boolean>(false);
   const [quantity, setQuantity] = useState<number>(1);
   const [addedToast, setAddedToast] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      onCustomizerStateChange?.(false);
+    };
+  }, [onCustomizerStateChange]);
 
   const filteredItems = MENU_ITEMS.filter((item) => {
     const matchesCategory = selectedCategory === 'all' || item.categoryId === selectedCategory;
@@ -66,12 +75,21 @@ export const MenuScreen: React.FC<Props> = ({
 
   const handleOpenCustomizer = (item: MenuItem) => {
     setCustomizingItem(item);
+    onCustomizerStateChange?.(true);
     setSelectedSize('S');
     setSelectedTemp('ICED');
     setSelectedSweetness(25);
     setSelectedMilk('WHOLE');
     setHasExtraShot(false);
     setQuantity(1);
+    try {
+      audioFeedbackService.playTactileClickSound();
+    } catch {}
+  };
+
+  const handleCloseCustomizer = () => {
+    setCustomizingItem(null);
+    onCustomizerStateChange?.(false);
     try {
       audioFeedbackService.playTactileClickSound();
     } catch {}
@@ -100,6 +118,7 @@ export const MenuScreen: React.FC<Props> = ({
 
     onAddToCart(cartItem);
     setCustomizingItem(null);
+    onCustomizerStateChange?.(false);
     setAddedToast(`${customizingItem.nameTh} (${selectedSize}) เพิ่มลงในตะกร้าแล้ว`);
 
     try {
@@ -110,6 +129,28 @@ export const MenuScreen: React.FC<Props> = ({
 
   return (
     <div className="px-4 py-3 space-y-4">
+      {/* Study Café 24/7 Branding Banner */}
+      <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#161418] to-[#101014] border border-[#262632] flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-3">
+          <img
+            src={APP_LOGO_BASE64}
+            alt="Study Café 24/7"
+            className="h-14 sm:h-16 w-auto max-w-[120px] object-contain filter drop-shadow flex-shrink-0 hover:scale-105 transition-transform"
+          />
+          <div>
+            <h2 className="text-xs font-bold text-white tracking-wide">Study Café 24/7 Specialty</h2>
+            <p className="text-[10px] text-stone-400">สั่งตรงถึงโต๊ะทำงานของคุณ • คำนวณบิลเรียลไทม์</p>
+          </div>
+        </div>
+        <button
+          onClick={onOpenCart}
+          className="pill-embossed-dark px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 text-stone-200 cursor-pointer active:scale-95"
+        >
+          <CanvasIcon name="cart" size={14} color="#FF6B00" />
+          <span className="font-mono font-bold text-[#FF8C33]">{cartCount}</span>
+        </button>
+      </div>
+
       {/* Table Warning if not checked in */}
       {!activeSession ? (
         <div className="p-3.5 rounded-2xl bg-[#1A1A1E] border border-[#282830] flex items-center justify-between text-xs text-stone-300">
@@ -130,7 +171,7 @@ export const MenuScreen: React.FC<Props> = ({
       ) : (
         <div className="p-2.5 rounded-xl bg-[#1A1A1E] border border-[#282830] flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
+            <span className="w-2 h-2 rounded-full bg-[#34D399]"></span>
             <span className="text-stone-300">
               สั่งสำหรับ: <strong className="text-[#FF6B00] font-mono">โต๊ะ {activeSession.tableId}</strong>
             </span>
@@ -258,238 +299,259 @@ export const MenuScreen: React.FC<Props> = ({
         })}
       </div>
 
-      {/* Product Customizer Sheet / Modal */}
+      {/* Product Customizer Sheet / Modal with Smooth Scrolling & Pinned Action Bar */}
       {customizingItem && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="w-full max-w-sm max-h-[85vh] overflow-y-auto bg-[#1A1A1E] rounded-t-3xl sm:rounded-2xl border border-[#282830] p-5 shadow-2xl space-y-4 text-xs scrollbar-none">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-bold text-stone-100">
+        <div 
+          onClick={handleCloseCustomizer}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm sm:max-w-md max-h-[85vh] sm:max-h-[88vh] bg-[#1A1A1E] rounded-t-3xl sm:rounded-3xl border border-[#282830] shadow-2xl flex flex-col overflow-hidden text-xs"
+          >
+            {/* Modal Fixed Header */}
+            <div className="p-4 sm:p-5 border-b border-[#282830] flex items-start justify-between flex-shrink-0 bg-[#1A1A1E] z-10">
+              <div className="pr-3">
+                <span className="text-[10px] font-mono text-[#FF6B00] uppercase tracking-wider font-bold block mb-0.5">
+                  CUSTOMIZE ORDER
+                </span>
+                <h3 className="text-base font-bold text-stone-100 line-clamp-1">
                   {customizingItem.nameTh}
                 </h3>
-                <span className="text-[11px] text-stone-400 block mt-0.5">
+                <span className="text-[11px] text-stone-400 block mt-0.5 line-clamp-1">
                   {customizingItem.nameEn}
                 </span>
               </div>
               <button
-                onClick={() => setCustomizingItem(null)}
-                className="w-7 h-7 rounded-full bg-[#121214] text-stone-400 flex items-center justify-center border border-[#282830]"
+                onClick={handleCloseCustomizer}
+                className="w-8 h-8 rounded-full bg-[#121214] hover:bg-[#282830] text-stone-400 hover:text-stone-100 flex items-center justify-center border border-[#282830] transition-colors cursor-pointer flex-shrink-0 active:scale-95"
+                aria-label="ปิด"
               >
                 ✕
               </button>
             </div>
 
-            {/* Base64 Product Preview */}
-            <div className="w-full h-32 rounded-2xl overflow-hidden bg-[#121214] border border-[#282830]">
-              <img
-                src={customizingItem.imageBase64 || customizingItem.imageUrl || ''}
-                alt={customizingItem.nameTh}
-                className="w-full h-full object-contain p-2"
-              />
-            </div>
-
-            {/* Size Selector (If Available) */}
-            {customizingItem.hasSizeOption && (
-              <div className="space-y-1.5">
-                <span className="text-xs text-stone-300 font-semibold block">เลือกขนาด (Cup Size):</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => {
-                      audioFeedbackService.playTactileClickSound();
-                      setSelectedSize('S');
-                    }}
-                    className={`py-2 px-3 rounded-xl border text-center transition-all ${
-                      selectedSize === 'S'
-                        ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
-                        : 'bg-[#121214] border-[#282830] text-stone-400'
-                    }`}
-                  >
-                    <span className="block text-xs">Small (12oz)</span>
-                    <span className="font-mono text-[11px]">฿{customizingItem.basePriceSmall}</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      audioFeedbackService.playTactileClickSound();
-                      setSelectedSize('L');
-                    }}
-                    className={`py-2 px-3 rounded-xl border text-center transition-all ${
-                      selectedSize === 'L'
-                        ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
-                        : 'bg-[#121214] border-[#282830] text-stone-400'
-                    }`}
-                  >
-                    <span className="block text-xs">Large (16oz)</span>
-                    <span className="font-mono text-[11px]">฿{customizingItem.basePriceLarge}</span>
-                  </button>
+            {/* Scrollable Body: with touch scrolling, overscroll-contain, and bottom padding */}
+            <div
+              className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 scrollbar-none overscroll-contain pb-28 sm:pb-32"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {/* Base64 Product Preview */}
+              <div className="w-full h-36 rounded-2xl overflow-hidden bg-[#121214] border border-[#282830] relative group">
+                <img
+                  src={customizingItem.imageBase64 || customizingItem.imageUrl || ''}
+                  alt={customizingItem.nameTh}
+                  className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-[#0B0B0C]/80 border border-[#282830] text-[10px] font-mono text-[#FF6B00] font-bold">
+                  {customizingItem.categoryId.toUpperCase()}
                 </div>
               </div>
-            )}
 
-            {/* Temperature Option (Coffee & Tea) */}
-            {(customizingItem.categoryId === 'coffee' || customizingItem.categoryId === 'tea') && (
-              <div className="space-y-1.5">
-                <span className="text-xs text-stone-300 font-semibold block">อุณหภูมิ (Temperature):</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => {
-                      audioFeedbackService.playTactileClickSound();
-                      setSelectedTemp('ICED');
-                    }}
-                    className={`py-2 rounded-xl border text-center ${
-                      selectedTemp === 'ICED'
-                        ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
-                        : 'bg-[#121214] border-[#282830] text-stone-400'
-                    }`}
-                  >
-                    เย็น (Iced)
-                  </button>
-                  <button
-                    onClick={() => {
-                      audioFeedbackService.playTactileClickSound();
-                      setSelectedTemp('HOT');
-                    }}
-                    className={`py-2 rounded-xl border text-center ${
-                      selectedTemp === 'HOT'
-                        ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
-                        : 'bg-[#121214] border-[#282830] text-stone-400'
-                    }`}
-                  >
-                    ร้อน (Hot)
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Sweetness Slider/Buttons */}
-            {(customizingItem.categoryId === 'coffee' || customizingItem.categoryId === 'tea') && (
-              <div className="space-y-1.5">
-                <span className="text-xs text-stone-300 font-semibold block">ระดับความหวาน (Sweetness):</span>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[0, 25, 50, 100].map((level) => (
+              {/* Size Selector (If Available) */}
+              {customizingItem.hasSizeOption && (
+                <div className="space-y-1.5">
+                  <span className="text-xs text-stone-300 font-semibold block">เลือกขนาด (Cup Size):</span>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
-                      key={level}
                       onClick={() => {
-                        audioFeedbackService.playTactileClickSound();
-                        setSelectedSweetness(level as SweetnessLevel);
+                        setSelectedSize('S');
+                        try { audioFeedbackService.playTactileClickSound(); } catch {}
                       }}
-                      className={`py-1.5 rounded-xl border text-center font-mono text-[11px] ${
-                        selectedSweetness === level
-                          ? 'bg-[#FF6B00] text-stone-950 font-bold border-[#FF6B00]'
+                      className={`py-2.5 px-3 rounded-xl border text-center transition-all cursor-pointer active:scale-95 ${
+                        selectedSize === 'S'
+                          ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold shadow-md shadow-[#FF6B00]/10'
+                          : 'bg-[#121214] border-[#282830] text-stone-400 hover:border-stone-600'
+                      }`}
+                    >
+                      <span className="block text-xs">Small (12oz)</span>
+                      <span className="font-mono text-[11px]">฿{customizingItem.basePriceSmall}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedSize('L');
+                        try { audioFeedbackService.playTactileClickSound(); } catch {}
+                      }}
+                      className={`py-2.5 px-3 rounded-xl border text-center transition-all cursor-pointer active:scale-95 ${
+                        selectedSize === 'L'
+                          ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold shadow-md shadow-[#FF6B00]/10'
+                          : 'bg-[#121214] border-[#282830] text-stone-400 hover:border-stone-600'
+                      }`}
+                    >
+                      <span className="block text-xs">Large (16oz)</span>
+                      <span className="font-mono text-[11px]">฿{customizingItem.basePriceLarge}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Temperature Option (Coffee & Tea) */}
+              {(customizingItem.categoryId === 'coffee' || customizingItem.categoryId === 'tea') && (
+                <div className="space-y-1.5">
+                  <span className="text-xs text-stone-300 font-semibold block">อุณหภูมิ (Temperature):</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedTemp('ICED');
+                        try { audioFeedbackService.playTactileClickSound(); } catch {}
+                      }}
+                      className={`py-2.5 rounded-xl border text-center transition-all cursor-pointer active:scale-95 ${
+                        selectedTemp === 'ICED'
+                          ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
                           : 'bg-[#121214] border-[#282830] text-stone-400'
                       }`}
                     >
-                      {level}%
+                      เย็น (Iced)
                     </button>
-                  ))}
+                    <button
+                      onClick={() => {
+                        setSelectedTemp('HOT');
+                        try { audioFeedbackService.playTactileClickSound(); } catch {}
+                      }}
+                      className={`py-2.5 rounded-xl border text-center transition-all cursor-pointer active:scale-95 ${
+                        selectedTemp === 'HOT'
+                          ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
+                          : 'bg-[#121214] border-[#282830] text-stone-400'
+                      }`}
+                    >
+                      ร้อน (Hot)
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Milk Option (For Coffee) */}
-            {customizingItem.categoryId === 'coffee' && customizingItem.id !== 'americano' && (
-              <div className="space-y-1.5">
-                <span className="text-xs text-stone-300 font-semibold block">นมทางเลือก (Milk Option):</span>
-                <div className="grid grid-cols-3 gap-1.5">
+              {/* Sweetness Slider/Buttons */}
+              {(customizingItem.categoryId === 'coffee' || customizingItem.categoryId === 'tea') && (
+                <div className="space-y-1.5">
+                  <span className="text-xs text-stone-300 font-semibold block">ระดับความหวาน (Sweetness):</span>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[0, 25, 50, 100].map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => {
+                          setSelectedSweetness(level as SweetnessLevel);
+                          try { audioFeedbackService.playTactileClickSound(); } catch {}
+                        }}
+                        className={`py-2 rounded-xl border text-center font-mono text-[11px] transition-all cursor-pointer active:scale-95 ${
+                          selectedSweetness === level
+                            ? 'bg-[#FF6B00] text-stone-950 font-bold border-[#FF6B00] shadow'
+                            : 'bg-[#121214] border-[#282830] text-stone-400 hover:text-stone-200'
+                        }`}
+                      >
+                        {level}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Milk Option (For Coffee) */}
+              {customizingItem.categoryId === 'coffee' && customizingItem.id !== 'americano' && (
+                <div className="space-y-1.5">
+                  <span className="text-xs text-stone-300 font-semibold block">นมทางเลือก (Milk Option):</span>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      onClick={() => {
+                        setSelectedMilk('WHOLE');
+                        try { audioFeedbackService.playTactileClickSound(); } catch {}
+                      }}
+                      className={`py-2.5 rounded-xl border text-center text-[10px] transition-all cursor-pointer active:scale-95 ${
+                        selectedMilk === 'WHOLE'
+                          ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
+                          : 'bg-[#121214] border-[#282830] text-stone-400'
+                      }`}
+                    >
+                      นมสดแท้ (+0฿)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedMilk('OAT');
+                        try { audioFeedbackService.playTactileClickSound(); } catch {}
+                      }}
+                      className={`py-2.5 rounded-xl border text-center text-[10px] transition-all cursor-pointer active:scale-95 ${
+                        selectedMilk === 'OAT'
+                          ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
+                          : 'bg-[#121214] border-[#282830] text-stone-400'
+                      }`}
+                    >
+                      นมโอ๊ต (+20฿)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedMilk('ALMOND');
+                        try { audioFeedbackService.playTactileClickSound(); } catch {}
+                      }}
+                      className={`py-2.5 rounded-xl border text-center text-[10px] transition-all cursor-pointer active:scale-95 ${
+                        selectedMilk === 'ALMOND'
+                          ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33] font-bold'
+                          : 'bg-[#121214] border-[#282830] text-stone-400'
+                      }`}
+                    >
+                      อัลมอนด์ (+20฿)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Extra Shot Add-on */}
+              {customizingItem.categoryId === 'coffee' && (
+                <div className="p-3.5 rounded-xl bg-[#121214] border border-[#282830] flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-stone-200 block">เพิ่มเอสเพรสโซ่ช็อต</span>
+                    <span className="text-[10px] text-stone-400">+25 บาท (Double Ristretto)</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={hasExtraShot}
+                    onChange={(e) => {
+                      setHasExtraShot(e.target.checked);
+                      try { audioFeedbackService.playTactileClickSound(); } catch {}
+                    }}
+                    className="w-5 h-5 accent-[#FF6B00] rounded cursor-pointer"
+                  />
+                </div>
+              )}
+
+              {/* Quantity Stepper */}
+              <div className="flex items-center justify-between pt-2 border-t border-[#282830]">
+                <span className="text-xs text-stone-300 font-semibold">จำนวน:</span>
+                <div className="flex items-center gap-3 bg-[#121214] px-3 py-1.5 rounded-xl border border-[#282830]">
                   <button
                     onClick={() => {
-                      audioFeedbackService.playTactileClickSound();
-                      setSelectedMilk('WHOLE');
+                      setQuantity((q) => Math.max(1, q - 1));
+                      try { audioFeedbackService.playTactileClickSound(); } catch {}
                     }}
-                    className={`py-2 rounded-xl border text-center text-[10px] ${
-                      selectedMilk === 'WHOLE'
-                        ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33]'
-                        : 'bg-[#121214] border-[#282830] text-stone-400'
-                    }`}
+                    className="w-7 h-7 rounded-lg bg-[#222228] hover:bg-[#282830] text-stone-300 flex items-center justify-center cursor-pointer active:scale-95"
                   >
-                    นมสดแท้ (+0฿)
+                    <CanvasIcon name="minus" size={10} color="#F4F4F5" />
                   </button>
+                  <span className="font-mono text-sm font-bold text-stone-100 min-w-5 text-center">{quantity}</span>
                   <button
                     onClick={() => {
-                      audioFeedbackService.playTactileClickSound();
-                      setSelectedMilk('OAT');
+                      setQuantity((q) => q + 1);
+                      try { audioFeedbackService.playTactileClickSound(); } catch {}
                     }}
-                    className={`py-2 rounded-xl border text-center text-[10px] ${
-                      selectedMilk === 'OAT'
-                        ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33]'
-                        : 'bg-[#121214] border-[#282830] text-stone-400'
-                    }`}
+                    className="w-7 h-7 rounded-lg bg-[#222228] hover:bg-[#282830] text-stone-300 flex items-center justify-center cursor-pointer active:scale-95"
                   >
-                    นมโอ๊ต (+20฿)
-                  </button>
-                  <button
-                    onClick={() => {
-                      audioFeedbackService.playTactileClickSound();
-                      setSelectedMilk('ALMOND');
-                    }}
-                    className={`py-2 rounded-xl border text-center text-[10px] ${
-                      selectedMilk === 'ALMOND'
-                        ? 'bg-[#FF6B00]/20 border-[#FF6B00] text-[#FF8C33]'
-                        : 'bg-[#121214] border-[#282830] text-stone-400'
-                    }`}
-                  >
-                    อัลมอนด์ (+20฿)
+                    <CanvasIcon name="plus" size={10} color="#F4F4F5" />
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* Extra Shot Add-on */}
-            {customizingItem.categoryId === 'coffee' && (
-              <div className="p-3 rounded-xl bg-[#121214] border border-[#282830] flex items-center justify-between">
-                <div>
-                  <span className="font-semibold text-stone-200 block">เพิ่มเอสเพรสโซ่ช็อต</span>
-                  <span className="text-[10px] text-stone-400">+25 บาท (Double Ristretto)</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={hasExtraShot}
-                  onChange={(e) => {
-                    audioFeedbackService.playTactileClickSound();
-                    setHasExtraShot(e.target.checked);
-                  }}
-                  className="w-4 h-4 accent-[#FF6B00] rounded cursor-pointer"
-                />
-              </div>
-            )}
-
-            {/* Quantity Stepper */}
-            <div className="flex items-center justify-between pt-2 border-t border-[#282830]">
-              <span className="text-xs text-stone-300 font-semibold">จำนวน:</span>
-              <div className="flex items-center gap-3 bg-[#121214] px-3 py-1.5 rounded-xl border border-[#282830]">
-                <button
-                  onClick={() => {
-                    audioFeedbackService.playTactileClickSound();
-                    setQuantity((q) => Math.max(1, q - 1));
-                  }}
-                  className="w-6 h-6 rounded-lg bg-[#222228] text-stone-300 flex items-center justify-center hover:bg-[#282830]"
-                >
-                  <CanvasIcon name="minus" size={10} color="#F4F4F5" />
-                </button>
-                <span className="font-mono text-sm font-bold text-stone-100">{quantity}</span>
-                <button
-                  onClick={() => {
-                    audioFeedbackService.playTactileClickSound();
-                    setQuantity((q) => q + 1);
-                  }}
-                  className="w-6 h-6 rounded-lg bg-[#222228] text-stone-300 flex items-center justify-center hover:bg-[#282830]"
-                >
-                  <CanvasIcon name="plus" size={10} color="#F4F4F5" />
-                </button>
               </div>
             </div>
 
-            {/* Add to Cart Submit Button */}
-            <button
-              onClick={handleConfirmAddToCart}
-              className="btn-tactile-orange w-full py-3 rounded-xl text-xs flex items-center justify-between px-4"
-            >
-              <span>เพิ่มลงในตะกร้า</span>
-              <span className="font-mono text-sm">
-                ฿{(calculateModalUnitPrice(customizingItem) * quantity).toFixed(2)}
-              </span>
-            </button>
+            {/* Sticky Bottom Action Bar (Always visible and reachable) */}
+            <div className="sticky bottom-0 left-0 right-0 p-4 bg-[#1A1A1E]/95 backdrop-blur-md border-t border-[#282830] z-20 pb-8 sm:pb-4 flex-shrink-0">
+              <button
+                onClick={handleConfirmAddToCart}
+                className="btn-tactile-orange w-full py-3.5 rounded-2xl text-xs flex items-center justify-between px-5 cursor-pointer shadow-xl min-h-[48px]"
+              >
+                <span className="font-bold">เพิ่มลงในตะกร้า</span>
+                <span className="font-mono text-sm font-extrabold bg-[#0B0B0C]/40 px-2.5 py-1 rounded-xl border border-[#FF6B00]/40">
+                  ฿{(calculateModalUnitPrice(customizingItem) * quantity).toFixed(2)}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -497,7 +559,7 @@ export const MenuScreen: React.FC<Props> = ({
       {/* Added Toast */}
       {addedToast && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#1A1A1E] text-stone-100 border border-[#282830] text-xs shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-          <CanvasIcon name="check" size={14} color="#10B981" />
+          <CanvasIcon name="check" size={14} color="#34D399" />
           <span>{addedToast}</span>
         </div>
       )}

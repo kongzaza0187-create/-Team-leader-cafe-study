@@ -31,10 +31,34 @@ import { FloatingCartSheet } from './components/FloatingCartSheet';
 import { PaymentModal } from './components/PaymentModal';
 import { SessionTimelineScreen } from './components/SessionTimelineScreen';
 import { ManagerDashboard } from './components/ManagerDashboard';
+import { TabletDashboardLayout } from './components/TabletDashboardLayout';
 import { CanvasIcon } from './components/CanvasIcon';
 import { audioFeedbackService } from './services/audioFeedbackService';
 
+interface DeviceInfo {
+  device: 'mobile' | 'tablet';
+  orientation: 'landscape' | 'portrait';
+}
+
+const getDeviceInfo = (): DeviceInfo => {
+  if (typeof window === 'undefined') {
+    return { device: 'mobile', orientation: 'portrait' };
+  }
+  
+  const ua = navigator.userAgent || '';
+  const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isTabletUA = /Tablet|Android(?!.*Mobile)/i.test(ua);
+  const isWideScreen = window.innerWidth >= 768;
+  
+  const device: 'mobile' | 'tablet' = (isIPad || isTabletUA || isWideScreen) ? 'tablet' : 'mobile';
+  const orientation: 'landscape' | 'portrait' = window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
+  
+  return { device, orientation };
+};
+
 export default function App() {
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>(getDeviceInfo);
+
   const [activeTab, setActiveTab] = useState<NavigationTab>('tables');
   const [tables, setTables] = useState<CafeTable[]>(cafeStore.getTables());
   const [activeSession, setActiveSession] = useState<TableSession | null>(cafeStore.getActiveSession());
@@ -47,9 +71,23 @@ export default function App() {
   const [revenueAnalytics, setRevenueAnalytics] = useState<RevenueAnalytics>(cafeStore.getRevenueAnalytics());
 
   // UI Modals
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
   const [tableRequiredPrompt, setTableRequiredPrompt] = useState<boolean>(false);
+
+  // Auto-Detect Device & Orientation (Auto-switches layout and orientation in real time)
+  useEffect(() => {
+    const handleUpdate = () => {
+      setDeviceInfo(getDeviceInfo());
+    };
+    window.addEventListener('resize', handleUpdate);
+    window.addEventListener('orientationchange', handleUpdate);
+    return () => {
+      window.removeEventListener('resize', handleUpdate);
+      window.removeEventListener('orientationchange', handleUpdate);
+    };
+  }, []);
 
   // Sync state with cafeStore
   useEffect(() => {
@@ -70,6 +108,7 @@ export default function App() {
 
   // Safe Tab Routing Handler (Clears any blocking sheets immediately)
   const handleTabChange = (tab: NavigationTab) => {
+    setIsCustomizerOpen(false);
     setIsCartOpen(false);
     setTableRequiredPrompt(false);
     setActiveTab(tab);
@@ -93,6 +132,8 @@ export default function App() {
 
   const handleClearCart = () => {
     cafeStore.clearCart();
+    setIsCartOpen(false);
+    setIsCustomizerOpen(false);
   };
 
   const handleProceedToPayment = () => {
@@ -126,10 +167,51 @@ export default function App() {
   const currentTable = tables.find((t) => t.tableId === activeSession?.tableId);
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
+  // Render Dedicated Tablet / iPad View (Desktop-Class Split in Landscape, Spacious Dedicated View in Portrait)
+  if (deviceInfo.device === 'tablet') {
+    return (
+      <>
+        <TabletDashboardLayout
+          tables={tables}
+          activeSession={activeSession}
+          cartItems={cartItems}
+          totals={totals}
+          activityLogs={activityLogs}
+          metrics={metrics}
+          settledTransactions={settledTransactions}
+          revenueAnalytics={revenueAnalytics}
+          onSelectAndOccupyTable={handleSelectAndOccupyTable}
+          onAddToCart={handleAddToCart}
+          onUpdateCartQty={handleUpdateCartQty}
+          onClearCart={handleClearCart}
+          onProceedToPayment={handleProceedToPayment}
+          onTriggerFailover={handleTriggerFailover}
+          onForceResetTable={handleForceResetTable}
+          orientation={deviceInfo.orientation}
+        />
+
+        {/* PromptPay Payment & Slip Verification Modal */}
+        {isPaymentOpen && currentTransaction && activeSession && (
+          <PaymentModal
+            transaction={currentTransaction}
+            totals={totals}
+            activeSession={activeSession}
+            onConfirmVerifiedCheckout={handleConfirmVerifiedCheckout}
+            onClose={() => setIsPaymentOpen(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  const shouldHideBottomNav = isCustomizerOpen || isCartOpen || isPaymentOpen || tableRequiredPrompt;
+
+  // Render Mobile View (One-Handed Edge-to-Edge with Docked Navigation)
   return (
     <MobileFrame
       activeTableId={activeSession?.tableId}
       secretCode={activeSession?.secretCode}
+      hideNavigation={shouldHideBottomNav}
       navigation={
         <Navigation
           activeTab={activeTab}
@@ -165,6 +247,7 @@ export default function App() {
             onNavigateToTables={() => handleTabChange('tables')}
             onOpenCart={() => setIsCartOpen(true)}
             cartCount={cartCount}
+            onCustomizerStateChange={setIsCustomizerOpen}
           />
         )}
 
@@ -201,6 +284,10 @@ export default function App() {
         onUpdateQty={handleUpdateCartQty}
         onClearCart={handleClearCart}
         onProceedToPayment={handleProceedToPayment}
+        onNavigateToTables={() => {
+          setIsCartOpen(false);
+          handleTabChange('tables');
+        }}
       />
 
       {/* PromptPay Payment & Slip Verification Modal */}

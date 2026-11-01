@@ -20,8 +20,8 @@ interface Props {
 
 export const CanvasAnimatedCheckmark: React.FC<Props> = ({
   size = 110,
-  color = '#10B981',
-  glowColor = 'rgba(16, 185, 129, 0.45)',
+  color = '#34D399',
+  glowColor = 'rgba(52, 211, 153, 0.45)',
   onAnimationComplete,
   playAudio = true,
 }) => {

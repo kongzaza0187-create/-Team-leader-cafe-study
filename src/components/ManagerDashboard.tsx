@@ -21,6 +21,7 @@ import { audioFeedbackService } from '../services/audioFeedbackService';
 import { CanvasIcon } from './CanvasIcon';
 import { CanvasStarRating } from './CanvasStarRating';
 import { CanvasRevenueDonut } from './CanvasRevenueDonut';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 interface Props {
   tables: CafeTable[];
@@ -46,8 +47,8 @@ export const ManagerDashboard: React.FC<Props> = ({
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Dashboard Subtabs
-  const [activeTab, setActiveTab] = useState<'REVENUE' | 'REVIEWS' | 'BOT_TEST' | 'METRICS' | 'TABLES' | 'AUDIT'>('REVENUE');
+  // Dashboard Subtabs (With Multi-Period Financial & Unit Analytics as Primary View)
+  const [activeTab, setActiveTab] = useState<'ANALYTICS' | 'REVENUE' | 'REVIEWS' | 'BOT_TEST' | 'METRICS' | 'TABLES' | 'AUDIT'>('ANALYTICS');
   const [logFilter, setLogFilter] = useState<string>('ALL');
 
   // Verify Admin Password using SHA-256 cryptographic check
@@ -183,6 +184,18 @@ export const ManagerDashboard: React.FC<Props> = ({
       {/* Subtab Selector */}
       <div className="overflow-x-auto scrollbar-none -mx-4 px-4 flex gap-1.5 py-1">
         <button
+          onClick={() => { setActiveTab('ANALYTICS'); audioFeedbackService.playTactileClickSound(); }}
+          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeTab === 'ANALYTICS'
+              ? 'btn-tactile-orange text-stone-950 font-bold shadow-md'
+              : 'bg-[#1A1A1E] text-stone-400 border border-[#282830]'
+          }`}
+        >
+          <CanvasIcon name="chart" size={12} color={activeTab === 'ANALYTICS' ? '#0B0B0C' : '#FF6B00'} />
+          <span>แดชบอร์ดหลายช่วงเวลา (Multi-Period)</span>
+        </button>
+
+        <button
           onClick={() => { setActiveTab('REVENUE'); audioFeedbackService.playTactileClickSound(); }}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeTab === 'REVENUE'
@@ -190,7 +203,7 @@ export const ManagerDashboard: React.FC<Props> = ({
               : 'bg-[#1A1A1E] text-stone-400 border border-[#282830]'
           }`}
         >
-          <CanvasIcon name="chart" size={12} color={activeTab === 'REVENUE' ? '#0B0B0C' : '#A1A1AA'} />
+          <CanvasIcon name="shield" size={12} color={activeTab === 'REVENUE' ? '#0B0B0C' : '#A1A1AA'} />
           <span>รายได้จริง (15k Target)</span>
         </button>
 
@@ -254,6 +267,13 @@ export const ManagerDashboard: React.FC<Props> = ({
           <span>Audit Logs ({activityLogs.length})</span>
         </button>
       </div>
+
+      {/* TAB 0: ADVANCED MULTI-PERIOD FINANCIAL & ANALYTICS DASHBOARD (STRICT REAL DATA) */}
+      {activeTab === 'ANALYTICS' && (
+        <AnalyticsDashboard
+          settledTransactions={settledTransactions}
+        />
+      )}
 
       {/* TAB 1: REVENUE ANALYTICS & HTML5 CANVAS DONUT CHART */}
       {activeTab === 'REVENUE' && (

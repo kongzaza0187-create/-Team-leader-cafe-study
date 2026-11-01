@@ -119,6 +119,32 @@ export interface PromptPayTransaction {
   createdAt: string;
   settledAt?: string;
   isBot?: boolean; // Strictly isolated from admin revenue
+  items?: CartItem[];
+  totalUnits?: number;
+}
+
+export type AnalyticsPeriod = 'daily' | 'weekly' | 'monthly' | 'annual';
+
+export interface BarChartDataPoint {
+  label: string;
+  periodKey: string;
+  revenue: number;
+  netProfit: number;
+  totalUnits: number;
+  orderCount: number;
+}
+
+export interface MultiPeriodSummary {
+  period: AnalyticsPeriod;
+  totalRevenue: number;
+  netProfit: number;
+  totalUnitsSold: number;
+  totalOrdersCount: number;
+  averageOrderValue: number;
+  chartBars: BarChartDataPoint[];
+  hasRealData: boolean;
+  startDate: string;
+  endDate: string;
 }
 
 export interface CustomerReview {

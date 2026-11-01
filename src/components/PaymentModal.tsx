@@ -20,6 +20,8 @@ import { audioFeedbackService } from '../services/audioFeedbackService';
 import { CanvasIcon } from './CanvasIcon';
 import { CanvasStarRating } from './CanvasStarRating';
 import { CanvasAnimatedCheckmark } from './CanvasAnimatedCheckmark';
+import { InteractiveStatusPopup } from './InteractiveStatusPopup';
+import { APP_LOGO_BASE64 } from '../data/appLogoBase64';
 
 interface Props {
   transaction: PromptPayTransaction;
@@ -64,6 +66,7 @@ export const PaymentModal: React.FC<Props> = ({
     revokedSecretCode: string;
     receipt: PromptPayTransaction;
   } | null>(null);
+  const [showInteractiveSuccessPopup, setShowInteractiveSuccessPopup] = useState<boolean>(false);
 
   // Post-Checkout Customer Rating State
   const [customerRating, setCustomerRating] = useState<number>(5);
@@ -137,6 +140,7 @@ export const PaymentModal: React.FC<Props> = ({
         revokedSecretCode: settled.revokedSecretCode,
         receipt: settled.receipt,
       });
+      setShowInteractiveSuccessPopup(true);
 
       // Play success chime
       audioFeedbackService.playSuccessChime();
@@ -173,6 +177,7 @@ export const PaymentModal: React.FC<Props> = ({
         revokedSecretCode: settled.revokedSecretCode,
         receipt: settled.receipt,
       });
+      setShowInteractiveSuccessPopup(true);
 
       audioFeedbackService.playSuccessChime();
       confetti({
@@ -214,14 +219,24 @@ export const PaymentModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-      <div className="w-full max-w-sm max-h-[92vh] overflow-y-auto bg-[#1A1A1E] rounded-t-3xl sm:rounded-2xl border border-[#282830] p-5 shadow-2xl flex flex-col scrollbar-none text-xs">
-        {/* Header */}
+      <div 
+        className="w-full max-w-sm sm:max-w-md max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain bg-[#1A1A1E] rounded-t-3xl sm:rounded-2xl border border-[#282830] p-5 pb-32 sm:pb-8 shadow-2xl flex flex-col scrollbar-none text-xs"
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
+      >
+        {/* Header with Study Café 24/7 Logo */}
         <div className="flex items-center justify-between pb-3 border-b border-[#282830] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <CanvasIcon name="shield" size={18} color="#FF6B00" />
+          <div className="flex items-center gap-2.5">
+            <img
+              src={APP_LOGO_BASE64}
+              alt="Study Café 24/7"
+              className="h-12 w-auto max-w-[110px] object-contain filter drop-shadow flex-shrink-0 hover:scale-105 transition-transform"
+            />
             <div>
               <span className="text-[10px] font-bold text-[#FF6B00] uppercase tracking-wider font-mono block">
-                EMVCo LOCKED AMOUNT QR
+                STUDY CAFÉ 24/7 • PAYMENT
               </span>
               <h3 className="text-sm font-bold text-stone-100">
                 {settledResult ? 'สรุปการใช้งาน & ประเมินบริการ' : 'ชำระเงินผ่าน PromptPay'}
@@ -428,14 +443,14 @@ export const PaymentModal: React.FC<Props> = ({
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-[#10B981] font-mono tracking-widest uppercase">
+                <span className="text-[10px] font-bold text-[#34D399] font-mono tracking-widest uppercase">
                   CHECKOUT COMPLETED
                 </span>
                 <h4 className="text-base font-bold text-stone-100 mt-0.5">
                   ตรวจสอบสลิป & ชำระเงินสำเร็จ
                 </h4>
                 <p className="text-[11px] text-stone-400">
-                  ขอบคุณที่ใช้บริการ Lumina Study & Coffee Cafe 24H
+                  ขอบคุณที่ใช้บริการ Study Café 24/7
                 </p>
               </div>
 
@@ -447,11 +462,11 @@ export const PaymentModal: React.FC<Props> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-stone-400">ยอดเงินที่ชำระ:</span>
-                  <span className="font-mono text-[#10B981] font-bold">฿{settledResult.receipt.amount.toFixed(2)}</span>
+                  <span className="font-mono text-[#34D399] font-bold">฿{settledResult.receipt.amount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-stone-400">สถานะโต๊ะ {settledResult.tableId}:</span>
-                  <span className="text-[#10B981] font-bold">เปลี่ยนเป็น ว่าง (AVAILABLE) เรียบร้อย</span>
+                  <span className="text-[#34D399] font-bold">เปลี่ยนเป็น ว่าง (AVAILABLE) เรียบร้อย</span>
                 </div>
               </div>
 
@@ -550,6 +565,44 @@ export const PaymentModal: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      {/* Interactive Status Popup with HTML5 Canvas Animated Checkmark & Vector Stroke */}
+      {showInteractiveSuccessPopup && settledResult && (
+        <InteractiveStatusPopup
+          isOpen={showInteractiveSuccessPopup}
+          type="SUCCESS_PAYMENT"
+          title="ชำระเงิน & ตรวจสอบสลิปสำเร็จ"
+          subtitle="ระบบหักยอดชำระเงิน ตรวจสอบสลิปความถูกต้อง และคืนสถานะโต๊ะทำงานเรียบร้อยแล้ว"
+          details={
+            <div className="p-3.5 rounded-2xl bg-[#0B0B0C] border border-[#282830] space-y-1.5 text-xs text-left">
+              <div className="flex justify-between">
+                <span className="text-stone-400">เลขที่คำสั่งซื้อ:</span>
+                <span className="font-mono text-[#FF8C33] font-bold">{settledResult.receipt.orderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-400">ยอดชำระสุทธิ:</span>
+                <span className="font-mono text-[#10B981] font-bold text-sm">฿{settledResult.receipt.amount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-400">เลขอ้างอิงธนาคาร:</span>
+                <span className="font-mono text-stone-300">{settledResult.receipt.bankReferenceNo}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-400">สถานะโต๊ะ {settledResult.tableId}:</span>
+                <span className="text-[#10B981] font-bold">AVAILABLE (โต๊ะว่างพร้อมใช้งาน)</span>
+              </div>
+            </div>
+          }
+          primaryButtonText="ดูใบเสร็จ & ให้คะแนนบริการ"
+          onPrimaryClick={() => setShowInteractiveSuccessPopup(false)}
+          secondaryButtonText="ปิด"
+          onSecondaryClick={() => {
+            setShowInteractiveSuccessPopup(false);
+            onClose();
+          }}
+          onClose={() => setShowInteractiveSuccessPopup(false)}
+        />
+      )}
     </div>
   );
 };
