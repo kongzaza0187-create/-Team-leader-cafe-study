@@ -19,7 +19,8 @@ import {
   PromptPayTransaction,
   ConcurrencyMetrics,
   RevenueAnalytics,
-  MenuItem
+  MenuItem,
+  AppLanguage
 } from '../types';
 import { MENU_ITEMS } from '../data/menuData';
 import { CanvasIcon } from './CanvasIcon';
@@ -42,6 +43,7 @@ interface Props {
   metrics: ConcurrencyMetrics;
   settledTransactions: PromptPayTransaction[];
   revenueAnalytics: RevenueAnalytics;
+  language?: AppLanguage;
   onSelectAndOccupyTable: (tableId: string) => void;
   onAddToCart: (item: CartItem) => void;
   onUpdateCartQty: (cartItemId: string, delta: number) => void;
@@ -61,6 +63,7 @@ export const TabletDashboardLayout: React.FC<Props> = ({
   metrics,
   settledTransactions,
   revenueAnalytics,
+  language,
   onSelectAndOccupyTable,
   onAddToCart,
   onUpdateCartQty,
@@ -410,7 +413,7 @@ export const TabletDashboardLayout: React.FC<Props> = ({
   );
 
   return (
-    <div className="min-h-screen w-full bg-[#070708] text-stone-100 flex flex-col font-sans selection:bg-[#FF6B00] selection:text-stone-950 relative overflow-x-hidden">
+    <div className="min-h-screen w-full bg-[#070708] text-stone-100 flex flex-col font-sans selection:bg-[#FF6B00] selection:text-stone-950 relative overflow-x-hidden pb-32">
       {/* Dynamic Ambient Background */}
       <WebGLAmbientBackground />
 
@@ -433,23 +436,54 @@ export const TabletDashboardLayout: React.FC<Props> = ({
               </span>
             </div>
             <p className="text-[11px] text-stone-400">
-              Co-Working Sanctuary & Specialty Brews • Real-Time Distributed Architecture
+              Co-Working Sanctuary & Artisanal Coffee
             </p>
           </div>
         </div>
 
-        {/* Center Live Stats */}
-        <div className="hidden md:flex items-center gap-3">
-          <div className="px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs bg-[#122419] border border-[#1E432E] shadow-sm">
+        {/* Center Live Stats & Orientation Switcher */}
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs bg-[#122419] border border-[#1E432E] shadow-sm">
             <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse" />
             <span className="text-[#34D399] font-mono font-medium">โต๊ะว่าง {availableCount} / {tables.length}</span>
           </div>
-          <div className="pill-embossed-dark px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs hidden lg:flex">
-            <CanvasIcon name="wifi" size={14} color="#34D399" />
-            <span className="text-stone-300 font-mono">50,000 CONCURRENCY</span>
+
+          {/* Interactive Orientation Switcher (Tablet Portrait vs Landscape Design Modes) */}
+          <div className="flex items-center gap-1 bg-[#121216] p-1 rounded-xl border border-[#282834]">
+            <button
+              onClick={() => {
+                setCurrentOrientation('portrait');
+                try { audioFeedbackService.playTactileClickSound(); } catch {}
+              }}
+              title="สลับเป็นมุมมองแท็บเล็ตแนวตั้ง (iPad Portrait)"
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none active:scale-95 ${
+                currentOrientation === 'portrait'
+                  ? 'bg-[#FF6B00] text-stone-950 shadow-md font-extrabold'
+                  : 'text-stone-400 hover:text-stone-200'
+              }`}
+            >
+              <span>📱</span>
+              <span className="whitespace-nowrap">แนวตั้ง (Portrait)</span>
+            </button>
+            <button
+              onClick={() => {
+                setCurrentOrientation('landscape');
+                try { audioFeedbackService.playTactileClickSound(); } catch {}
+              }}
+              title="สลับเป็นมุมมองแท็บเล็ตแนวนอน (Tablet Pro Landscape)"
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none active:scale-95 ${
+                currentOrientation === 'landscape'
+                  ? 'bg-[#FF6B00] text-stone-950 shadow-md font-extrabold'
+                  : 'text-stone-400 hover:text-stone-200'
+              }`}
+            >
+              <span>💻</span>
+              <span className="whitespace-nowrap">แนวนอน (Landscape)</span>
+            </button>
           </div>
+
           {activeSession && (
-            <div className="px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs bg-[#122419] border border-[#1E432E] shadow-sm">
+            <div className="hidden xl:flex px-3 py-1.5 rounded-xl items-center gap-2 text-xs bg-[#122419] border border-[#1E432E] shadow-sm">
               <span className="w-2 h-2 rounded-full bg-[#34D399]" />
               <span className="text-[#34D399] font-bold">โต๊ะ {activeSession.tableId}</span>
               <span className="text-[#FF8C33] font-mono font-bold bg-[#0B0B0C] px-1.5 py-0.2 rounded border border-[#FF6B00]/30">
@@ -460,21 +494,28 @@ export const TabletDashboardLayout: React.FC<Props> = ({
         </div>
 
         {/* Right Controls (Time Clock CE + iPad Portrait Companion Button) */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {currentOrientation === 'portrait' && (
             <button
               onClick={() => {
                 try { audioFeedbackService.playTactileClickSound(); } catch {}
                 setIsPortraitCompanionOpen(true);
               }}
-              className="btn-tactile-orange px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 font-bold cursor-pointer active:scale-95 shadow-md shadow-[#FF6B00]/20"
+              className="btn-tactile-orange px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 font-bold cursor-pointer active:scale-95 shadow-md shadow-[#FF6B00]/20 flex-shrink-0 box-border"
             >
               <CanvasIcon name="cart" size={14} color="#0B0B0C" />
-              <span>เวิร์กสเตชัน &amp; ตะกร้า ({cartItems.reduce((acc, i) => acc + i.quantity, 0)})</span>
+              <span>ตะกร้า ({cartItems.reduce((acc, i) => acc + i.quantity, 0)})</span>
             </button>
           )}
 
-          <div className="pill-embossed-dark px-3 py-1.5 rounded-xl text-xs font-mono text-stone-300">
+          {language && (
+            <div className="pill-embossed-dark px-2.5 py-1.5 rounded-xl text-xs font-bold text-stone-200 font-mono flex items-center gap-1.5 border border-[#282830]">
+              <span>{({ th: '🇹🇭 TH', en: '🇬🇧 EN', ja: '🇯🇵 JA', pt: '🇵🇹 PT', zh: '🇨🇳 ZH' } as Record<AppLanguage, string>)[language]}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+            </div>
+          )}
+
+          <div className="pill-embossed-dark px-3 py-1.5 rounded-xl text-xs font-mono text-stone-300 hidden sm:block">
             {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
         </div>
@@ -482,15 +523,15 @@ export const TabletDashboardLayout: React.FC<Props> = ({
 
       {/* iPad Portrait Dedicated Quick Action Ribbon */}
       {currentOrientation === 'portrait' && (
-        <div className="bg-[#101014] border-b border-[#242430] px-4 sm:px-6 py-2.5 flex items-center justify-between z-30">
+        <div className="bg-[#101014] border-b border-[#242430] px-4 sm:px-6 py-2.5 flex items-center justify-between z-30 shadow-md">
           <div className="flex items-center gap-2.5">
-            <img src={APP_LOGO_BASE64} alt="Study Café 24/7" className="h-9 w-auto max-w-[80px] object-contain flex-shrink-0 filter drop-shadow" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse flex-shrink-0" />
             <div>
-              <span className="text-xs font-bold text-white block">
-                {activeSession ? `กำลังใช้งานโต๊ะ ${activeSession.tableId}` : 'มุมมอง iPad แนวตั้ง (iPad Portrait View)'}
+              <span className="text-xs font-extrabold text-white block">
+                {activeSession ? `เซสชันโต๊ะ ${activeSession.tableId} • กำลังใช้งาน` : 'มุมมองแท็บเล็ตแนวตั้ง (iPad Portrait View)'}
               </span>
               <span className="text-[10px] text-stone-400">
-                {activeSession ? `รหัสลับ PIN: ${activeSession.secretCode} • พร้อมสั่งเครื่องดื่ม` : 'แตะเลือกโต๊ะว่างด้านล่างเพื่อเริ่มเช็คอิน'}
+                {activeSession ? `รหัสลับ PIN: ${activeSession.secretCode} • สั่งกาแฟหรือเช็คเอาท์ได้ทันที` : 'แตะเลือกโต๊ะว่าง 20 จุดด้านล่างเพื่อเริ่มเช็คอิน'}
               </span>
             </div>
           </div>
@@ -509,20 +550,19 @@ export const TabletDashboardLayout: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 2-COLUMN SPLIT OR PORTRAIT FULL-WIDTH WORKSPACE */}
-      <div className={`flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 ${
+      {/* 2-COLUMN SPLIT OR PORTRAIT SPACIOUS CENTERED WORKSPACE */}
+      <div className={`flex-1 w-full mx-auto p-4 sm:p-6 ${
         currentOrientation === 'landscape'
-          ? 'grid grid-cols-1 lg:grid-cols-12 gap-6'
-          : 'flex flex-col space-y-6 pb-28'
+          ? 'max-w-[1600px] grid grid-cols-1 lg:grid-cols-12 gap-6'
+          : 'max-w-4xl flex flex-col space-y-6 pb-32'
       } relative z-10`}>
         
         {/* ======================================================== */}
         {/* PRIMARY WORKSPACE: 8 COLS IN LANDSCAPE / FULL IN PORTRAIT */}
         {/* ======================================================== */}
         <div className={currentOrientation === 'landscape' ? 'lg:col-span-8 flex flex-col space-y-4' : 'w-full flex flex-col space-y-4'}>
-          
-          {/* Segmented Top Navigation Tab Bar */}
-          <div className="p-1.5 rounded-2xl bg-[#121214] border border-[#282830] flex items-center gap-1.5 shadow-lg">
+          {/* Segmented Top Navigation Tab Bar (2-Row Grid on Portrait / 4 on Landscape) */}
+          <div className="p-1.5 rounded-2xl bg-[#121214] border border-[#282830] grid grid-cols-2 md:grid-cols-4 gap-1.5 shadow-lg">
             <button
               onClick={() => handleTabChange('tables')}
               className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -709,6 +749,7 @@ export const TabletDashboardLayout: React.FC<Props> = ({
                 activityLogs={activityLogs}
                 settledTransactions={settledTransactions}
                 revenueAnalytics={revenueAnalytics}
+                language={language}
                 onTriggerFailoverTest={onTriggerFailover}
                 onForceResetTable={onForceResetTable}
               />
@@ -730,40 +771,40 @@ export const TabletDashboardLayout: React.FC<Props> = ({
       {currentOrientation === 'portrait' && (
         <aside
           aria-label="แถบข้อมูลเวิร์กสเตชันและตะกร้า"
-          className="fixed bottom-0 inset-x-0 z-40 bg-[#0B0B0C]/95 backdrop-blur-xl border-t border-[#282832] px-4 py-3 shadow-[0_-10px_25px_rgba(0,0,0,0.7)]"
+          className="fixed bottom-0 inset-x-0 z-40 bg-[#0B0B0C]/95 backdrop-blur-xl border-t border-[#282832] px-3 sm:px-6 py-2.5 sm:py-3 shadow-[0_-10px_25px_rgba(0,0,0,0.7)] w-full box-border"
         >
-          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <img src={APP_LOGO_BASE64} alt="Study Café 24/7" className="h-10 w-auto max-w-[90px] object-contain flex-shrink-0 filter drop-shadow" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-2 sm:gap-3 w-full box-border">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <img src={APP_LOGO_BASE64} alt="Study Café 24/7" className="h-9 sm:h-10 w-auto max-w-[80px] sm:max-w-[90px] object-contain flex-shrink-0 filter drop-shadow" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-xs font-bold text-white truncate">
                     {activeSession ? `โต๊ะ ${activeSession.tableId}` : 'ยังไม่ได้เลือกโต๊ะ'}
                   </span>
                   {activeSession ? (
-                    <span className="text-[10px] font-mono text-[#34D399] bg-[#122419] px-1.5 py-0.5 rounded border border-[#1E432E] font-bold">
+                    <span className="text-[10px] font-mono text-[#34D399] bg-[#122419] px-1.5 py-0.2 rounded border border-[#1E432E] font-bold flex-shrink-0">
                       PIN {activeSession.secretCode}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-stone-400">พร้อมเช็คอิน</span>
+                    <span className="text-[10px] text-stone-400 flex-shrink-0">พร้อมเช็คอิน</span>
                   )}
                 </div>
-                <p className="text-[11px] text-stone-400">
-                  {cartItems.length} รายการ • รวม <span className="text-[#FF8C33] font-bold font-mono">฿{totals.totalAmount.toFixed(2)}</span>
+                <p className="text-[11px] text-stone-400 truncate">
+                  {cartItems.length} รายการ • <span className="text-[#FF8C33] font-bold font-mono">฿{totals.totalAmount.toFixed(2)}</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <button
                 onClick={() => {
                   try { audioFeedbackService.playTactileClickSound(); } catch {}
                   setIsPortraitCompanionOpen(true);
                 }}
-                className="pill-embossed-dark px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 text-stone-200 cursor-pointer active:scale-95"
+                className="pill-embossed-dark px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 text-stone-200 cursor-pointer active:scale-95 box-border"
               >
                 <CanvasIcon name="cart" size={14} color="#FF6B00" />
-                <span>ดูตะกร้า ({cartItems.reduce((acc, i) => acc + i.quantity, 0)})</span>
+                <span className="whitespace-nowrap">ดูตะกร้า ({cartItems.reduce((acc, i) => acc + i.quantity, 0)})</span>
               </button>
 
               {cartItems.length > 0 && activeSession && (
@@ -772,7 +813,7 @@ export const TabletDashboardLayout: React.FC<Props> = ({
                     try { audioFeedbackService.playTactileClickSound(); } catch {}
                     onProceedToPayment();
                   }}
-                  className="btn-tactile-orange px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-lg shadow-[#FF6B00]/25"
+                  className="btn-tactile-orange px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-lg shadow-[#FF6B00]/25 box-border whitespace-nowrap"
                 >
                   <CanvasIcon name="shield" size={14} color="#0B0B0C" />
                   <span>ชำระเงิน</span>

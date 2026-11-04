@@ -52,16 +52,8 @@ export function computeSHA256(ascii: string): string {
   return sha256Sync(ascii);
 }
 
-/**
- * Cryptographic SHA-256 Hash of Admin Access Key
- * Plaintext password is strictly never stored or compared directly
- */
-export const ADMIN_PASSWORD_SHA256_HASH = '8936b51f709037b5c81b7587751799ea2292ffb924c9c80db253af549516c148';
-
-export function verifyAdminPassword(input: string): boolean {
-  if (!input) return false;
-  return computeSHA256(input) === ADMIN_PASSWORD_SHA256_HASH;
-}
+// Note: Admin authentication and passwords are now strictly handled server-side via /api/v1/auth/admin-login
+// No passwords, hashes, or credentials reside in client-side bundles.
 
 function sha256Sync(ascii: string): string {
   function rightRotate(value: number, amount: number) {

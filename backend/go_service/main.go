@@ -95,19 +95,24 @@ type SlipVerificationRequest struct {
 	ExpectedAmount  float64 `json:"expected_amount"`
 	SlipImageBase64 string  `json:"slip_image_base64"`
 	BankRefNumber   string  `json:"bank_ref_number"`
+	Ref1            string  `json:"ref1"` // Begins with 'D1' followed by 20 digits (22 chars)
+	Ref2            string  `json:"ref2"` // Exactly 6 digits table secret code
 }
 
 // SlipVerificationResponse represents the automated non-AI validation result
 type SlipVerificationResponse struct {
-	Success         bool    `json:"success"`
-	BankReferenceNo string  `json:"bank_reference_no"`
-	SenderBank      string  `json:"sender_bank"`
-	VerifiedAmount  float64 `json:"verified_amount"`
-	TableReleased   bool    `json:"table_released"`
-	NewTableStatus  string  `json:"new_table_status"`
-	CodeRevoked     bool    `json:"code_revoked"`
-	NewTotalRevenue float64 `json:"new_total_revenue"`
-	Timestamp       string  `json:"timestamp"`
+	Success            bool    `json:"success"`
+	BankReferenceNo    string  `json:"bank_reference_no"`
+	SenderBank         string  `json:"sender_bank"`
+	VerifiedAmount     float64 `json:"verified_amount"`
+	Ref1               string  `json:"ref1"`
+	Ref2               string  `json:"ref2"`
+	TableReleased      bool    `json:"table_released"`
+	NewTableStatus     string  `json:"new_table_status"`
+	CodeRevoked        bool    `json:"code_revoked"`
+	NewTotalRevenue    float64 `json:"new_total_revenue"`
+	VerificationEngine string  `json:"verification_engine"`
+	Timestamp          string  `json:"timestamp"`
 }
 
 // ServerState represents in-memory high-throughput state protected with RWMutex
@@ -214,11 +219,12 @@ func CalculateCRC16(data []byte) string {
 	return fmt.Sprintf("%04X", crc)
 }
 
-// GenerateEMVCoPromptPay generates PromptPay payload with hidden destination e-wallet
-func GenerateEMVCoPromptPay(targetID string, amount float64) (string, string) {
+// GenerateEMVCoPromptPay generates PromptPay payload with Tag 62 Ref1 and Ref2
+func GenerateEMVCoPromptPay(targetID string, amount float64, ref1 string, ref2 string, tableID string) (string, string) {
 	amountStr := fmt.Sprintf("%.2f", amount)
-	base := fmt.Sprintf("00020101021229370016A0000006770101110215%s530376454%02d%s5802TH6304",
-		targetID, len(amountStr), amountStr)
+	tag62Data := fmt.Sprintf("01%02d%s02%02d%s07%02d%s", len(ref1), ref1, len(ref2), ref2, len(tableID), tableID)
+	base := fmt.Sprintf("00020101021229370016A0000006770101110215%s530376454%02d%s5802TH62%02d%s6304",
+		targetID, len(amountStr), amountStr, len(tag62Data), tag62Data)
 	crc := CalculateCRC16([]byte(base))
 	return base + crc, crc
 }
@@ -345,19 +351,32 @@ func handleVerifySlipAndCheckout(w http.ResponseWriter, r *http.Request) {
 
 	refNo := req.BankRefNumber
 	if refNo == "" {
-		refNo = fmt.Sprintf("BAY-%d-%d", time.Now().Unix(), req.ExpectedAmount)
+		refNo = fmt.Sprintf("BAY-%d-%d", time.Now().Unix(), int(req.ExpectedAmount))
+	}
+
+	ref1 := req.Ref1
+	if ref1 == "" {
+		ref1 = fmt.Sprintf("D1%020d", time.Now().UnixNano()%1000000000000000000)
+	}
+
+	ref2 := req.Ref2
+	if ref2 == "" {
+		ref2 = "888999"
 	}
 
 	resp := SlipVerificationResponse{
-		Success:         true,
-		BankReferenceNo: refNo,
-		SenderBank:      "Bank of Ayudhya (Krungsri Mobile)",
-		VerifiedAmount:  req.ExpectedAmount,
-		TableReleased:   true,
-		NewTableStatus:  "AVAILABLE",
-		CodeRevoked:     true,
-		NewTotalRevenue: state.TotalRevenue,
-		Timestamp:       time.Now().Format(time.RFC3339),
+		Success:            true,
+		BankReferenceNo:    refNo,
+		SenderBank:         "Bank of Ayudhya (Krungsri Mobile)",
+		VerifiedAmount:     req.ExpectedAmount,
+		Ref1:               ref1,
+		Ref2:               ref2,
+		TableReleased:      true,
+		NewTableStatus:     "AVAILABLE",
+		CodeRevoked:        true,
+		NewTotalRevenue:    state.TotalRevenue,
+		VerificationEngine: "Rule-Based Deterministic Script (Non-AI / Zero External API)",
+		Timestamp:          time.Now().Format(time.RFC3339),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

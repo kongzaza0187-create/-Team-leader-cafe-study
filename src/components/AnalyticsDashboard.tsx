@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { PromptPayTransaction, AnalyticsPeriod } from '../types';
+import { PromptPayTransaction, AnalyticsPeriod, AppLanguage } from '../types';
 import { analyticsService } from '../services/analyticsService';
 import { audioFeedbackService } from '../services/audioFeedbackService';
 import { CanvasIcon } from './CanvasIcon';
@@ -14,14 +14,17 @@ import { CanvasIcon } from './CanvasIcon';
 interface Props {
   settledTransactions: PromptPayTransaction[];
   onRefresh?: () => void;
+  language?: AppLanguage;
 }
 
 export const AnalyticsDashboard: React.FC<Props> = ({
   settledTransactions = [],
   onRefresh,
+  language = 'th',
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<AnalyticsPeriod>('daily');
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
   // Filter only genuine, verified settled transactions
   const realSettledTxs = useMemo(() => {
@@ -36,10 +39,20 @@ export const AnalyticsDashboard: React.FC<Props> = ({
   const handlePeriodChange = (period: AnalyticsPeriod) => {
     setSelectedPeriod(period);
     setHoveredBarIndex(null);
+    setIsDropdownOpen(false);
     try {
       audioFeedbackService.playTactileClickSound();
     } catch {}
   };
+
+  const periodOptions: { id: AnalyticsPeriod; labelTh: string; labelEn: string; icon: string }[] = [
+    { id: 'daily', labelTh: 'รายวัน (Daily 24H)', labelEn: 'Daily (24 Hours)', icon: '⏱' },
+    { id: 'weekly', labelTh: 'รายสัปดาห์ (Weekly 7D)', labelEn: 'Weekly (7 Days)', icon: '📅' },
+    { id: 'monthly', labelTh: 'รายเดือน (Monthly 4W)', labelEn: 'Monthly (4 Weeks)', icon: '📊' },
+    { id: 'annual', labelTh: 'รายปี (Annual 12M)', labelEn: 'Annual (12 Months)', icon: '📈' },
+  ];
+
+  const currentOption = periodOptions.find((p) => p.id === selectedPeriod) || periodOptions[0];
 
   // Bar Chart calculations
   const chartHeight = 220;
@@ -52,69 +65,75 @@ export const AnalyticsDashboard: React.FC<Props> = ({
   return (
     <div className="space-y-5 animate-in fade-in duration-300">
       {/* ======================================================== */}
-      {/* 1. TOP HEADER & MULTI-PERIOD TAB SELECTOR               */}
+      {/* 1. TOP HEADER & MULTI-PERIOD DROPDOWN SELECTOR          */}
       {/* ======================================================== */}
-      <div className="p-4 rounded-3xl bg-[#141418] border border-[#282830] shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-4 sm:p-5 rounded-3xl bg-[#141418] border border-[#282830] shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse" />
-            <h2 className="text-sm font-extrabold text-white tracking-wide uppercase font-['Plus_Jakarta_Sans',sans-serif]">
-              ระบบแดชบอร์ดการเงิน &amp; ยอดขายหลายช่วงเวลา
+            <h2 className="text-sm sm:text-base font-extrabold text-white tracking-wide uppercase font-['Plus_Jakarta_Sans',sans-serif]">
+              ระบบวิเคราะห์ผลการดำเนินงาน &amp; ยอดขาย
             </h2>
-            <span className="px-2 py-0.5 rounded-full bg-[#FF6B00]/15 text-[#FF8C33] text-[9px] font-mono font-bold border border-[#FF6B00]/30">
-              POSTGRESQL 16 RLS
-            </span>
           </div>
           <p className="text-[11px] text-stone-400 mt-1">
             ดึงข้อมูลจริงจากตารางธุรกรรมและออเดอร์ • ระบบ Zero Mock Data
           </p>
         </div>
 
-        {/* Multi-Period Pill Selector (4 Time Horizons) */}
-        <div className="p-1 rounded-2xl bg-[#0B0B0C] border border-[#24242C] flex items-center gap-1 self-start sm:self-auto overflow-x-auto scrollbar-none">
+        {/* Space-Saving Professional Dropdown Component */}
+        <div className="relative self-start sm:self-auto z-30">
           <button
-            onClick={() => handlePeriodChange('daily')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              selectedPeriod === 'daily'
-                ? 'btn-tactile-orange shadow-md text-stone-950'
-                : 'text-stone-400 hover:text-stone-200 hover:bg-[#1A1A22]'
-            }`}
+            onClick={() => {
+              setIsDropdownOpen(!isDropdownOpen);
+              try { audioFeedbackService.playTactileClickSound(); } catch {}
+            }}
+            className="px-4 py-2.5 rounded-2xl bg-[#0B0B0C] hover:bg-[#181822] border border-[#2A2A38] text-xs font-bold text-white flex items-center gap-2.5 transition-all cursor-pointer shadow-lg active:scale-95"
+            aria-expanded={isDropdownOpen}
           >
-            รายวัน (Daily)
+            <span>{currentOption.icon}</span>
+            <span className="font-semibold text-stone-200">
+              {language === 'en' ? currentOption.labelEn : currentOption.labelTh}
+            </span>
+            <span className={`text-[10px] text-stone-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}>
+              ▼
+            </span>
           </button>
 
-          <button
-            onClick={() => handlePeriodChange('weekly')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              selectedPeriod === 'weekly'
-                ? 'btn-tactile-orange shadow-md text-stone-950'
-                : 'text-stone-400 hover:text-stone-200 hover:bg-[#1A1A22]'
-            }`}
-          >
-            รายสัปดาห์ (Weekly)
-          </button>
-
-          <button
-            onClick={() => handlePeriodChange('monthly')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              selectedPeriod === 'monthly'
-                ? 'btn-tactile-orange shadow-md text-stone-950'
-                : 'text-stone-400 hover:text-stone-200 hover:bg-[#1A1A22]'
-            }`}
-          >
-            รายเดือน (Monthly)
-          </button>
-
-          <button
-            onClick={() => handlePeriodChange('annual')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              selectedPeriod === 'annual'
-                ? 'btn-tactile-orange shadow-md text-stone-950'
-                : 'text-stone-400 hover:text-stone-200 hover:bg-[#1A1A22]'
-            }`}
-          >
-            รายปี (Annual)
-          </button>
+          {/* Floating Dropdown Menu (Guaranteed Viewport Bounded) */}
+          {isDropdownOpen && (
+            <>
+              {/* Dismiss backdrop */}
+              <div
+                className="fixed inset-0 z-30"
+                onClick={() => setIsDropdownOpen(false)}
+              />
+              <div className="absolute right-0 sm:right-0 left-auto top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-[#101014] border border-[#2A2A36] rounded-2xl shadow-2xl z-50 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-2.5 py-1 text-[10px] font-mono text-stone-400 uppercase tracking-wider border-b border-[#202028]">
+                  เลือกช่วงเวลา (Time Horizon)
+                </div>
+                {periodOptions.map((opt) => {
+                  const isSelected = selectedPeriod === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => handlePeriodChange(opt.id)}
+                      className={`w-full px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#FF6B00] text-stone-950 font-bold shadow-md'
+                          : 'text-stone-300 hover:text-white hover:bg-[#1A1A24]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{opt.icon}</span>
+                        <span>{language === 'en' ? opt.labelEn : opt.labelTh}</span>
+                      </div>
+                      {isSelected && <span>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

@@ -158,7 +158,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ==============================================================================
--- 6. ORDERS (Customer & Bot Food & Table Usage Orders)
+-- 6. ORDERS (Customer & Bot Food & Table Usage Orders with Ref1 & Ref2)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS orders (
     id VARCHAR(64) PRIMARY KEY,                        -- 'ORD-882190'
@@ -169,6 +169,8 @@ CREATE TABLE IF NOT EXISTS orders (
     vat_amount DECIMAL(10,2) NOT NULL,                 -- 7% VAT
     service_charge DECIMAL(10,2) NOT NULL,             -- 5% Service Charge
     total_amount DECIMAL(10,2) NOT NULL,
+    ref1 VARCHAR(22) NULL CHECK (ref1 IS NULL OR ref1 ~ '^D1[0-9]{20}$'), -- Begins with 'D1' + 20 digits
+    ref2 VARCHAR(6) NULL CHECK (ref2 IS NULL OR ref2 ~ '^[0-9]{6}$'),     -- 6 digits table secret code
     payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID', -- 'UNPAID', 'PENDING', 'SETTLED'
     slip_image TEXT NULL,                              -- Base64 Bank Slip proof
     bank_reference_no VARCHAR(100) NULL,
@@ -182,9 +184,60 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE INDEX IF NOT EXISTS idx_orders_session ON orders(session_id);
 CREATE INDEX IF NOT EXISTS idx_orders_revenue ON orders(payment_status, is_bot, settled_at);
 CREATE INDEX IF NOT EXISTS idx_orders_table ON orders(table_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_refs ON orders(ref1, ref2);
 
 -- ==============================================================================
--- 7. ADMIN_AUDIT_LOGS (Protected Exclusively for Admin Access)
+-- 7. PROMPTPAY_TRANSACTIONS (EMVCo Tag 62 Biller QR & Non-AI Verification)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS promptpay_transactions (
+    id VARCHAR(64) PRIMARY KEY,                        -- 'tx_1730591234_abc'
+    order_id VARCHAR(64) NOT NULL REFERENCES orders(id),
+    table_id VARCHAR(10) NOT NULL REFERENCES tables(id),
+    target_ewallet_id VARCHAR(15) NOT NULL DEFAULT '004999233365393',
+    amount DECIMAL(10,2) NOT NULL,
+    ref1 VARCHAR(22) NOT NULL CHECK (ref1 ~ '^D1[0-9]{20}$'), -- Begins with 'D1' + 20 digits
+    ref2 VARCHAR(6) NOT NULL CHECK (ref2 ~ '^[0-9]{6}$'),     -- 6 digits table secret code
+    emvco_payload TEXT NOT NULL,
+    crc16 VARCHAR(4) NOT NULL,
+    payment_status VARCHAR(20) NOT NULL DEFAULT 'PENDING_VERIFICATION',
+    bank_reference_no VARCHAR(100) NULL,
+    sender_bank VARCHAR(100) NULL,
+    verification_engine VARCHAR(100) NOT NULL DEFAULT 'NON_AI_RULE_BASED_SCRIPT',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    settled_at TIMESTAMP NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_order ON promptpay_transactions(order_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_ref1 ON promptpay_transactions(ref1);
+CREATE INDEX IF NOT EXISTS idx_transactions_ref2 ON promptpay_transactions(ref2);
+
+-- ==============================================================================
+-- 8. TABLE_ACTIVITY_LOGS (Partitioned by Range / Month for 50,000 Users)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS table_activity_logs (
+    id BIGSERIAL,
+    table_id VARCHAR(10) NOT NULL,
+    session_id VARCHAR(64) NULL,
+    event_type VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    metadata JSONB NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
+
+-- Partition Tables
+CREATE TABLE IF NOT EXISTS table_activity_logs_2026_10 PARTITION OF table_activity_logs
+    FOR VALUES FROM ('2026-10-01 00:00:00') TO ('2026-11-01 00:00:00');
+CREATE TABLE IF NOT EXISTS table_activity_logs_2026_11 PARTITION OF table_activity_logs
+    FOR VALUES FROM ('2026-11-01 00:00:00') TO ('2026-12-01 00:00:00');
+CREATE TABLE IF NOT EXISTS table_activity_logs_2026_12 PARTITION OF table_activity_logs
+    FOR VALUES FROM ('2026-12-01 00:00:00') TO ('2027-01-01 00:00:00');
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_table_time ON table_activity_logs(table_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_session ON table_activity_logs(session_id);
+
+-- ==============================================================================
+-- 9. ADMIN_AUDIT_LOGS (Protected Exclusively for Admin Access)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
     id SERIAL PRIMARY KEY,
@@ -200,7 +253,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_audit_action ON admin_audit_logs(action, cr
 CREATE INDEX IF NOT EXISTS idx_admin_audit_table ON admin_audit_logs(table_id, created_at DESC);
 
 -- ==============================================================================
--- 8. ADMIN DAILY REVENUE TARGETS (15,000 THB Minimum Goal)
+-- 10. ADMIN DAILY REVENUE TARGETS (15,000 THB Minimum Goal)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS admin_daily_targets (
     target_date DATE PRIMARY KEY DEFAULT CURRENT_DATE,
@@ -212,7 +265,7 @@ CREATE TABLE IF NOT EXISTS admin_daily_targets (
 );
 
 -- ==============================================================================
--- 9. ADMIN USERS & SHA-256 PASSWORD HASH SECURITY
+-- 11. ADMIN USERS & SHA-256 PASSWORD HASH SECURITY
 -- Password 'Caferich888' -> SHA-256: 8936b51f709037b5c81b7587751799ea2292ffb924c9c80db253af549516c148
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS admin_users (
@@ -233,8 +286,8 @@ VALUES (
 ) ON CONFLICT (username) DO NOTHING;
 
 -- ==============================================================================
--- 10. POSTGRESQL ROW-LEVEL SECURITY (RLS) POLICIES
--- Enforces device-level row isolation for customer sessions and orders.
+-- 12. POSTGRESQL ROW-LEVEL SECURITY (RLS) POLICIES
+-- Enforces device-level row isolation for customer sessions, orders, and transactions.
 -- Admin role possesses bypass/elevation privileges after SHA-256 verification.
 -- ==============================================================================
 
@@ -243,10 +296,12 @@ ALTER TABLE tables ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promptpay_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE table_activity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_daily_targets ENABLE ROW LEVEL SECURITY;
 
--- 10.1 Table RLS: Public can view table statuses, only Admin or Server Functions can write
+-- 12.1 Table RLS: Public can view table statuses, only Admin or Server Functions can write
 DROP POLICY IF EXISTS p_tables_public_read ON tables;
 CREATE POLICY p_tables_public_read ON tables
     FOR SELECT USING (true);
@@ -255,13 +310,12 @@ DROP POLICY IF EXISTS p_tables_admin_write ON tables;
 CREATE POLICY p_tables_admin_write ON tables
     FOR ALL USING (current_setting('app.is_admin', true) = 'true');
 
--- 10.2 Menu Items RLS: Public read for fast rendering
+-- 12.2 Menu Items RLS: Public read for fast rendering
 DROP POLICY IF EXISTS p_menu_items_read ON menu_items;
 CREATE POLICY p_menu_items_read ON menu_items
     FOR SELECT USING (true);
 
--- 10.3 Sessions RLS: Strict Device Fingerprint Isolation
--- A client can only access or modify sessions matching their own device_fingerprint
+-- 12.3 Sessions RLS: Strict Device Fingerprint Isolation
 DROP POLICY IF EXISTS p_sessions_device_isolation ON sessions;
 CREATE POLICY p_sessions_device_isolation ON sessions
     FOR ALL USING (
@@ -269,7 +323,7 @@ CREATE POLICY p_sessions_device_isolation ON sessions
         OR current_setting('app.is_admin', true) = 'true'
     );
 
--- 10.4 Orders RLS: A client can only access their own session orders
+-- 12.4 Orders RLS: A client can only access their own session orders
 DROP POLICY IF EXISTS p_orders_session_isolation ON orders;
 CREATE POLICY p_orders_session_isolation ON orders
     FOR ALL USING (
@@ -280,18 +334,41 @@ CREATE POLICY p_orders_session_isolation ON orders
         OR current_setting('app.is_admin', true) = 'true'
     );
 
--- 10.5 Admin Audit Logs RLS: Strictly restricted to Admin role
+-- 12.5 PromptPay Transactions RLS: Strict Session Isolation
+DROP POLICY IF EXISTS p_transactions_isolation ON promptpay_transactions;
+CREATE POLICY p_transactions_isolation ON promptpay_transactions
+    FOR ALL USING (
+        order_id IN (
+            SELECT o.id FROM orders o
+            JOIN sessions s ON o.session_id = s.id
+            WHERE s.device_fingerprint = current_setting('app.current_device_fingerprint', true)
+        )
+        OR current_setting('app.is_admin', true) = 'true'
+    );
+
+-- 12.6 Activity Logs RLS: Customer sees only their table session logs; Admin views all
+DROP POLICY IF EXISTS p_activity_logs_isolation ON table_activity_logs;
+CREATE POLICY p_activity_logs_isolation ON table_activity_logs
+    FOR ALL USING (
+        session_id IN (
+            SELECT id FROM sessions 
+            WHERE device_fingerprint = current_setting('app.current_device_fingerprint', true)
+        )
+        OR current_setting('app.is_admin', true) = 'true'
+    );
+
+-- 12.7 Admin Audit Logs RLS: Strictly restricted to Admin role
 DROP POLICY IF EXISTS p_admin_audit_logs_restricted ON admin_audit_logs;
 CREATE POLICY p_admin_audit_logs_restricted ON admin_audit_logs
     FOR ALL USING (current_setting('app.is_admin', true) = 'true');
 
--- 10.6 Admin Daily Targets RLS: Restricted to Admin role
+-- 12.8 Admin Daily Targets RLS: Restricted to Admin role
 DROP POLICY IF EXISTS p_admin_targets_restricted ON admin_daily_targets;
 CREATE POLICY p_admin_targets_restricted ON admin_daily_targets
     FOR ALL USING (current_setting('app.is_admin', true) = 'true');
 
 -- ==============================================================================
--- 11. ATOMIC CONCURRENCY FUNCTION: SELECT FOR UPDATE TABLE LEASE
+-- 13. ATOMIC CONCURRENCY FUNCTION: SELECT FOR UPDATE TABLE LEASE
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION atomic_reserve_table(
     p_table_id VARCHAR(10),

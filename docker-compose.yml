@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # In-Memory Cache & Session Lock Store
+  redis:
+    image: redis:7-alpine
+    container_name: lumina-redis-cluster
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # High-Concurrency Application Node (8 Workers Internal Cluster)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lumina-cafe-app
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CLUSTER_MODE=true
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "3000:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # High-Performance Reverse Proxy & Layer 7 Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: lumina-nginx-proxy
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+    restart: unless-stopped

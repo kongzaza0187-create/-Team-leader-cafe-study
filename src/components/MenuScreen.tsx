@@ -8,7 +8,8 @@
  */
 
 import React, { useState } from 'react';
-import { MenuItem, CartItem, CoffeeTemperature, SweetnessLevel, MilkOption, TableSession } from '../types';
+import { MenuItem, CartItem, CoffeeTemperature, SweetnessLevel, MilkOption, TableSession, AppLanguage } from '../types';
+import { TRANSLATIONS } from '../i18n/translations';
 import { MENU_CATEGORIES, MENU_ITEMS } from '../data/menuData';
 import { CanvasIcon } from './CanvasIcon';
 import { audioFeedbackService } from '../services/audioFeedbackService';
@@ -16,6 +17,7 @@ import { APP_LOGO_BASE64 } from '../data/appLogoBase64';
 
 interface Props {
   activeSession: TableSession | null;
+  language?: AppLanguage;
   onAddToCart: (item: CartItem) => void;
   onNavigateToTables: () => void;
   onOpenCart: () => void;
@@ -25,12 +27,14 @@ interface Props {
 
 export const MenuScreen: React.FC<Props> = ({
   activeSession,
+  language = 'th',
   onAddToCart,
   onNavigateToTables,
   onOpenCart,
   cartCount,
   onCustomizerStateChange,
 }) => {
+  const dict = TRANSLATIONS[language];
   const [selectedCategory, setSelectedCategory] = useState<string>('coffee');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
@@ -128,28 +132,7 @@ export const MenuScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="px-4 py-3 space-y-4">
-      {/* Study Café 24/7 Branding Banner */}
-      <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#161418] to-[#101014] border border-[#262632] flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
-          <img
-            src={APP_LOGO_BASE64}
-            alt="Study Café 24/7"
-            className="h-14 sm:h-16 w-auto max-w-[120px] object-contain filter drop-shadow flex-shrink-0 hover:scale-105 transition-transform"
-          />
-          <div>
-            <h2 className="text-xs font-bold text-white tracking-wide">Study Café 24/7 Specialty</h2>
-            <p className="text-[10px] text-stone-400">สั่งตรงถึงโต๊ะทำงานของคุณ • คำนวณบิลเรียลไทม์</p>
-          </div>
-        </div>
-        <button
-          onClick={onOpenCart}
-          className="pill-embossed-dark px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 text-stone-200 cursor-pointer active:scale-95"
-        >
-          <CanvasIcon name="cart" size={14} color="#FF6B00" />
-          <span className="font-mono font-bold text-[#FF8C33]">{cartCount}</span>
-        </button>
-      </div>
+    <div className="px-3 sm:px-4 py-2 space-y-3">
 
       {/* Table Warning if not checked in */}
       {!activeSession ? (

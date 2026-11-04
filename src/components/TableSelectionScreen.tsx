@@ -7,18 +7,20 @@
  * Mobile & Tablet Responsive Grid (iPad Mini/Pro & Smartphone)
  */
 
-import React, { useState } from 'react';
-import { CafeTable, TableSession } from '../types';
+import React, { useState, useEffect } from 'react';
+import { CafeTable, TableSession, AppLanguage } from '../types';
+import { TRANSLATIONS } from '../i18n/translations';
 import { CanvasIcon } from './CanvasIcon';
 import { audioFeedbackService } from '../services/audioFeedbackService';
 import { CanvasAnimatedCheckmark } from './CanvasAnimatedCheckmark';
 import { TableGridSystem } from './TableGridSystem';
 import { TABLE_ICON_AVAILABLE_BASE64 } from '../data/tableIconBase64';
-import { APP_LOGO_BASE64 } from '../data/appLogoBase64';
+import { cafeStore } from '../services/cafeStore';
 
 interface Props {
   tables: CafeTable[];
   activeSession: TableSession | null;
+  language?: AppLanguage;
   onSelectAndOccupyTable: (tableId: string) => void;
   onNavigateToMenu: () => void;
 }
@@ -26,9 +28,15 @@ interface Props {
 export const TableSelectionScreen: React.FC<Props> = ({
   tables = [],
   activeSession,
+  language = 'th',
   onSelectAndOccupyTable,
   onNavigateToMenu,
 }) => {
+  const dict = TRANSLATIONS[language];
+
+  useEffect(() => {
+    cafeStore.fetchTablesFromServer();
+  }, []);
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
   const [confirmingTable, setConfirmingTable] = useState<CafeTable | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
@@ -101,41 +109,23 @@ export const TableSelectionScreen: React.FC<Props> = ({
 
   return (
     <div className="px-3 sm:px-5 py-3 space-y-4 max-w-5xl mx-auto">
-      {/* PROMINENT HIGH-CONTRAST HERO HEADER ("เลือกโต๊ะทำงาน & ตะกร้าสินค้า") */}
-      <div className="header-hero-glow rounded-3xl p-4 sm:p-5 space-y-3 relative overflow-hidden">
-        {/* Subtle decorative background light flare */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6B00]/10 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10"></div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
-          <div className="flex items-center gap-3">
-            <img
-              src={APP_LOGO_BASE64}
-              alt="Study Café 24/7"
-              className="h-16 sm:h-20 w-auto max-w-[130px] sm:max-w-[160px] object-contain filter drop-shadow-xl flex-shrink-0 hover:scale-105 transition-transform"
-            />
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-white tracking-tight">
-                  Study Café 24/7
-                </h1>
-                <span className="text-[10px] font-mono text-[#FF6B00] bg-[#FF6B00]/15 px-2 py-0.2 rounded-full border border-[#FF6B00]/30 font-bold">
-                  20 โต๊ะ
-                </span>
-              </div>
-              <p className="text-xs text-stone-300">
-                แตะโต๊ะที่ว่างเพื่อเริ่มต้นใช้งานและรับรหัสลับ 6 หลัก
-              </p>
-            </div>
-          </div>
-
-          {/* Consolidated Single Status Pill (Zero Redundancy) */}
-          <div className="flex-shrink-0 self-start sm:self-auto">
-            <div className="badge-tactile-available px-3 py-1.5 rounded-2xl inline-flex items-center gap-2 text-xs font-mono">
-              <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse"></span>
-              <span>ว่าง {availableCount} / {safeTables.length}</span>
-            </div>
-          </div>
+      {/* Compact Floor Header (No Redundant Logo - Zero Vertical Waste) */}
+      <div className="bg-[#121216] border border-[#242430] rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-md">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+          <h2 className="text-xs sm:text-sm font-bold text-white tracking-wide">
+            {dict.tables?.heroTitle || 'แผนผังโต๊ะทำงาน (20 โต๊ะ)'}
+          </h2>
+          <span className="text-[10px] text-stone-400 hidden xs:inline">
+            • แตะโต๊ะว่างเพื่อเช็คอิน
+          </span>
         </div>
+
+        <div className="badge-tactile-available px-2.5 py-1 rounded-xl inline-flex items-center gap-1.5 text-[11px] font-mono flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
+          <span>ว่าง {availableCount} / {safeTables.length}</span>
+        </div>
+      </div>
 
         {/* Current Active Session Card (If customer is checked in) */}
         {activeSession && (
@@ -166,7 +156,6 @@ export const TableSelectionScreen: React.FC<Props> = ({
             </button>
           </div>
         )}
-      </div>
 
       {/* Zone Horizontal Filter */}
       <div className="overflow-x-auto scrollbar-none -mx-3 sm:mx-0 px-3 sm:px-0 flex items-center gap-1.5 py-1">

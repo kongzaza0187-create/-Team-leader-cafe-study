@@ -1,0 +1,202 @@
+[
+  {
+    "tableId": "T01",
+    "name": "Solo Focus Pod 01",
+    "zone": "Silent Focus Zone",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 3,
+    "updatedAt": "2026-11-04T09:09:01.150Z"
+  },
+  {
+    "tableId": "T02",
+    "name": "Solo Focus Pod 02",
+    "zone": "Silent Focus Zone",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T03",
+    "name": "Solo Focus Pod 03",
+    "zone": "Silent Focus Zone",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T04",
+    "name": "Solo Focus Pod 04",
+    "zone": "Silent Focus Zone",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T05",
+    "name": "Solo Focus Pod 05",
+    "zone": "Silent Focus Zone",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T06",
+    "name": "Duo Study Booth 06",
+    "zone": "Collaborative Zone",
+    "capacity": 2,
+    "socketCount": 6,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T07",
+    "name": "Duo Study Booth 07",
+    "zone": "Collaborative Zone",
+    "capacity": 2,
+    "socketCount": 6,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T08",
+    "name": "Duo Study Booth 08",
+    "zone": "Collaborative Zone",
+    "capacity": 2,
+    "socketCount": 6,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T09",
+    "name": "Duo Study Booth 09",
+    "zone": "Collaborative Zone",
+    "capacity": 2,
+    "socketCount": 6,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T10",
+    "name": "Duo Study Booth 10",
+    "zone": "Collaborative Zone",
+    "capacity": 2,
+    "socketCount": 6,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T11",
+    "name": "Garden Window Desk 11",
+    "zone": "Zen Garden View",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T12",
+    "name": "Garden Window Desk 12",
+    "zone": "Zen Garden View",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T13",
+    "name": "Garden Window Desk 13",
+    "zone": "Zen Garden View",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T14",
+    "name": "Garden Window Desk 14",
+    "zone": "Zen Garden View",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T15",
+    "name": "Quad Project Table 15",
+    "zone": "Team Workshop Area",
+    "capacity": 4,
+    "socketCount": 8,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T16",
+    "name": "Quad Project Table 16",
+    "zone": "Team Workshop Area",
+    "capacity": 4,
+    "socketCount": 8,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T17",
+    "name": "Quad Project Table 17",
+    "zone": "Team Workshop Area",
+    "capacity": 4,
+    "socketCount": 8,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T18",
+    "name": "Silent Standing Bar 18",
+    "zone": "Silent Focus Zone",
+    "capacity": 1,
+    "socketCount": 4,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T19",
+    "name": "Executive Pod 19",
+    "zone": "VIP Soundproof Pod",
+    "capacity": 2,
+    "socketCount": 6,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  },
+  {
+    "tableId": "T20",
+    "name": "Executive Pod 20",
+    "zone": "VIP Soundproof Pod",
+    "capacity": 2,
+    "socketCount": 6,
+    "status": "AVAILABLE",
+    "usesToday": 2,
+    "updatedAt": "2026-11-04T09:08:17.374Z"
+  }
+]

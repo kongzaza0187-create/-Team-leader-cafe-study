@@ -111,12 +111,16 @@ export interface PromptPayTransaction {
   tableId: string;
   targetEWalletId: string; // 004999233365393
   amount: number;
+  ref1: string; // Begins with 'D1' followed by 20 digits (22 characters total)
+  ref2: string; // 6 digits reserved by the table session
   emvcoPayload: string;
   crc16: string;
   status: PaymentStatus;
   bankReferenceNo?: string;
   senderBank?: string;
   createdAt: string;
+  createdAtTimestamp?: string; // Format: YYYYMMDDHHmmss (14 digits) embedded in QR Tag 62
+  createdAtFormatted?: string; // Format: DD/MM/YYYY เวลา HH:mm:ss น.
   settledAt?: string;
   isBot?: boolean; // Strictly isolated from admin revenue
   items?: CartItem[];
@@ -202,10 +206,26 @@ export interface ConcurrencyMetrics {
 
 export interface RevenueAnalytics {
   dailyTarget: number; // 15,000 THB
-  totalSettledAmount: number; // Strictly starting from 0.00 THB, REAL transactions only
+  totalSettledAmount: number; // Strictly starting from 0.00 THB, REAL transactions in 12:00 PM Thai cycle
   isTargetAchieved: boolean;
   gapOrSurplusAmount: number;
   percentageRatio: number;
   totalOrdersCount: number;
   averageOrderValue: number;
+  cycleStartFormatted: string; // e.g. "4 พ.ย. 12:00 น."
+  cycleEndFormatted: string; // e.g. "5 พ.ย. 11:59 น."
+  nextResetFormatted: string; // e.g. "ตัดยอดเวลา 12:00 น."
+  remainingFormatted: string; // e.g. "07:35:12"
 }
+
+export type AppLanguage = 'th' | 'en' | 'ja' | 'pt' | 'zh';
+
+export interface LanguageOption {
+  code: AppLanguage;
+  name: string;
+  nativeName: string;
+  flag: string;
+  greeting: string;
+  welcomeSub: string;
+}
+

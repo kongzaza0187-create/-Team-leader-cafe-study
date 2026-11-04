@@ -134,12 +134,34 @@ export const CanvasRevenueDonut: React.FC<CanvasRevenueDonutProps> = ({
   }, [analytics, size]);
 
   return (
-    <div className="flex flex-col items-center justify-center p-3">
+    <div className="flex flex-col items-center justify-center p-3 space-y-3">
       <canvas
         ref={canvasRef}
         style={{ width: `${size}px`, height: `${size}px` }}
         className="block mx-auto"
       />
+
+      {/* Thai 12:00 PM Business Cycle & Countdown Information Bar */}
+      <div className="w-full max-w-xs space-y-1.5 text-center">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#121214] border border-[#282830] text-[10px] text-stone-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] animate-pulse" />
+          <span className="font-semibold text-stone-200">รอบตัดยอด: ทุก 12:00 น. (เวลาประเทศไทย)</span>
+        </div>
+
+        <div className="flex items-center justify-between text-[10px] font-mono px-2 text-stone-400">
+          <span>{analytics.cycleStartFormatted || '12:00 น.'}</span>
+          <span className="text-[#FF8C33] font-bold">
+            {analytics.remainingFormatted ? `เหลืออีก ${analytics.remainingFormatted}` : 'รอตัดยอด 12:00 น.'}
+          </span>
+          <span>{analytics.cycleEndFormatted || '11:59 น.'}</span>
+        </div>
+
+        {analytics.totalSettledAmount === 0 && (
+          <div className="px-2.5 py-1 rounded-xl bg-[#0B0B0C] border border-[#282830] text-[10px] text-stone-400">
+            <span className="text-[#34D399] font-bold">● ค่าเริ่มต้น ฿0.00</span> (กราฟจะเริ่มนับเมื่อมีรายการชำระจริงในรอบ 12:00 น. นี้)
+          </div>
+        )}
+      </div>
     </div>
   );
 };

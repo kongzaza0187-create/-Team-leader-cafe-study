@@ -12,7 +12,8 @@
  */
 
 import React from 'react';
-import { CartItem, BillBreakdown, TableSession } from '../types';
+import { CartItem, BillBreakdown, TableSession, AppLanguage } from '../types';
+import { TRANSLATIONS } from '../i18n/translations';
 import { CanvasIcon } from './CanvasIcon';
 import { audioFeedbackService } from '../services/audioFeedbackService';
 import { APP_LOGO_BASE64 } from '../data/appLogoBase64';
@@ -23,6 +24,7 @@ interface Props {
   items: CartItem[];
   totals: BillBreakdown;
   activeSession: TableSession | null;
+  language?: AppLanguage;
   onUpdateQty: (cartItemId: string, delta: number) => void;
   onClearCart: () => void;
   onProceedToPayment: () => void;
@@ -35,11 +37,13 @@ export const FloatingCartSheet: React.FC<Props> = ({
   items,
   totals,
   activeSession,
+  language = 'th',
   onUpdateQty,
   onClearCart,
   onProceedToPayment,
   onNavigateToTables,
 }) => {
+  const dict = TRANSLATIONS[language];
   if (!isOpen) return null;
 
   const handleSafeClose = () => {
@@ -146,9 +150,9 @@ export const FloatingCartSheet: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Scrollable Modal Body (Smooth Mobile Scroll & Never Obscured by Bottom Nav) */}
+        {/* Scrollable Modal Body (Smooth Mobile Scroll & Contained) */}
         <div 
-          className="flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-32 sm:pb-36 space-y-4 scrollbar-none"
+          className="flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-6 space-y-4 scrollbar-none"
           style={{ 
             WebkitOverflowScrolling: 'touch',
             overscrollBehavior: 'contain'
@@ -329,28 +333,41 @@ export const FloatingCartSheet: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* Checkout CTA Action Button (Prominent & Always Accessible) */}
-              <div className="pt-1">
-                <button
-                  onClick={handleSafeProceed}
-                  disabled={!activeSession}
-                  className={`w-full py-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[50px] active:scale-[0.98] ${
-                    activeSession
-                      ? 'btn-tactile-orange shadow-lg shadow-[#FF6B00]/25'
-                      : 'bg-[#222228] text-stone-500 border border-[#2e2e38] cursor-not-allowed opacity-60'
-                  }`}
-                >
-                  <CanvasIcon name="shield" size={16} color={activeSession ? '#0B0B0C' : '#71717A'} />
-                  <span>ชำระเงิน / ยืนยันคำสั่งซื้อ (PromptPay QR)</span>
-                  <CanvasIcon name="arrow-right" size={14} color={activeSession ? '#0B0B0C' : '#71717A'} />
-                </button>
-              </div>
-
-              {/* Guaranteed Clearance Spacer so the button can be scrolled past Bottom Nav Bar */}
-              <div className="h-10 sm:h-14 flex-shrink-0" />
             </>
           )}
         </div>
+
+        {/* Pinned Sheet Footer (Always visible, perfectly bounded, never clips) */}
+        {items.length > 0 && (
+          <div className="p-4 bg-[#141418] border-t border-[#282830] flex flex-col gap-2 flex-shrink-0 z-10 shadow-2xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] text-stone-400 block font-medium">ยอดรวมสุทธิ (Net Total)</span>
+                <span className="text-xl sm:text-2xl font-black text-[#FF6B00] font-mono tracking-tight">
+                  ฿{totals.totalAmount.toFixed(2)}
+                </span>
+              </div>
+              <button
+                onClick={handleSafeProceed}
+                disabled={!activeSession}
+                className={`py-3 px-5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[46px] active:scale-95 flex-shrink-0 ${
+                  activeSession
+                    ? 'btn-tactile-orange shadow-lg shadow-[#FF6B00]/25'
+                    : 'bg-[#222228] text-stone-500 border border-[#2e2e38] cursor-not-allowed opacity-60'
+                }`}
+              >
+                <CanvasIcon name="shield" size={14} color={activeSession ? '#0B0B0C' : '#71717A'} />
+                <span className="whitespace-nowrap">ชำระเงิน (PromptPay)</span>
+                <CanvasIcon name="arrow-right" size={12} color={activeSession ? '#0B0B0C' : '#71717A'} />
+              </button>
+            </div>
+            {!activeSession && (
+              <span className="text-[10px] text-[#EF4444] text-center font-medium block">
+                * กรุณาแตะเลือกโต๊ะทำงานที่ว่างก่อนดำเนินการชำระเงิน
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

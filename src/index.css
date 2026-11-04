@@ -11,7 +11,7 @@
   --status-red: #EF4444;
 }
 
-body {
+html, body, #root {
   background-color: #0B0B0C;
   color: #F4F4F5;
   font-family: 'Prompt', 'Plus Jakarta Sans', sans-serif;
@@ -19,6 +19,25 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior-y: contain;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
+}
+
+button, a, select, [role="button"] {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 @layer utilities {

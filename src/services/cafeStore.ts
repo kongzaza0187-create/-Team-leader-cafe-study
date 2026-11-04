@@ -22,8 +22,7 @@ import {
 } from '../types';
 import { 
   generateCryptographicSecretCode, 
-  createSessionCryptogram, 
-  verifyAdminPassword 
+  createSessionCryptogram 
 } from './cryptoService';
 import { calculateBill, createPaymentTransaction, TARGET_EWALLET_ID } from './promptPayService';
 import { SlipVerificationResult } from './slipVerificationService';
@@ -33,6 +32,7 @@ import {
   retrieveServerSession, 
   purgeServerSession 
 } from './deviceSessionService';
+import { getThai12pmCycleWindow, ThaiCycleWindow } from './thaiTimeService';
 
 export const DAILY_REVENUE_TARGET = 15000; // 15,000 THB minimum daily target
 const BOT_SIMULATED_TABLE_IDS = ['T03', 'T07', 'T11', 'T15', 'T19'];
@@ -129,13 +129,13 @@ class CafeStoreManager {
   // Post-Checkout Customer Reviews
   private customerReviews: CustomerReview[] = [...INITIAL_REVIEWS];
 
-  // Bot Simulation Module: 5 tables tested for concurrency (Non-Revenue Isolated)
+  // Bot Simulation Module: Disabled by default to prevent client-side desync across real devices
   private botSimulation: BotSimulationStatus = {
-    enabled: true,
+    enabled: false,
     simulatedTables: [...BOT_SIMULATED_TABLE_IDS],
-    activeBotSessions: 2,
-    totalSimulatedOrders: 18,
-    lastSimulatedAction: 'T03: Bot Check-in (Non-Revenue Isolated)',
+    activeBotSessions: 0,
+    totalSimulatedOrders: 0,
+    lastSimulatedAction: 'System Standby',
     isRevenueIsolated: true,
   };
   private botSimulationInterval: any = null;
@@ -161,24 +161,119 @@ class CafeStoreManager {
 
   private failoverInterval: any = null;
   private eventSource: EventSource | null = null;
+  private lastTablesETag: string | null = null;
 
   constructor() {
     this.deviceFingerprint = getOrCreateDeviceFingerprint();
     this.restoreDeviceSessionIfPresent();
+    this.loadTransactionsFromStorage();
     this.startMetricsSimulation();
-    this.startBotSimulation();
     this.fetchTablesFromServer();
+    this.fetchTransactionsFromServer();
     this.initSSEConnection();
+
+    // High-Frequency Real-Time Cross-Device Polling Heartbeat (1.5s interval)
+    // Bandwidth Optimization: Pauses automatically when tab is hidden or backgrounded
+    if (typeof window !== 'undefined') {
+      setInterval(() => {
+        if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+          this.fetchTablesFromServer();
+        }
+      }, 1500);
+
+      // Periodic Thai 12:00 PM cycle countdown & rollover notification (5s interval)
+      setInterval(() => {
+        if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+          this.notifyListeners();
+        }
+      }, 5000);
+    }
+  }
+
+  private loadTransactionsFromStorage() {
+    try {
+      if (typeof window === 'undefined') return;
+      const stored = localStorage.getItem('study_cafe_settled_txs_v2');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.settledTransactions = parsed;
+        }
+      }
+    } catch {}
+  }
+
+  private saveTransactionsToStorage() {
+    try {
+      if (typeof window === 'undefined') return;
+      localStorage.setItem('study_cafe_settled_txs_v2', JSON.stringify(this.settledTransactions.slice(0, 500)));
+    } catch {}
+  }
+
+  private lastTransactionsETag: string | null = null;
+
+  public async fetchTransactionsFromServer(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    try {
+      const headers: Record<string, string> = {};
+      if (this.lastTransactionsETag) {
+        headers['If-None-Match'] = this.lastTransactionsETag;
+      }
+      const res = await fetch('/api/v1/transactions', { headers, cache: 'no-store' });
+      if (res.status === 304) return;
+      if (!res.ok) return;
+
+      const newEtag = res.headers.get('ETag');
+      if (newEtag) {
+        this.lastTransactionsETag = newEtag;
+      }
+
+      const data = await res.json();
+      if (data && Array.isArray(data.transactions) && data.transactions.length > 0) {
+        const map = new Map<string, PromptPayTransaction>();
+        this.settledTransactions.forEach((t) => map.set(t.transactionId, t));
+        data.transactions.forEach((t: PromptPayTransaction) => {
+          if (!map.has(t.transactionId)) {
+            map.set(t.transactionId, t);
+          }
+        });
+        this.settledTransactions = Array.from(map.values()).sort(
+          (a, b) => new Date(b.settledAt || b.createdAt).getTime() - new Date(a.settledAt || a.createdAt).getTime()
+        );
+        this.saveTransactionsToStorage();
+        this.notifyListeners();
+      }
+    } catch {}
   }
 
   /**
    * Fetch current table snapshot directly from HTTP API (Single Source of Truth)
+   * Bandwidth & Battery Optimization: Utilizes HTTP 304 Not Modified & ETag cache validation
    */
   public async fetchTablesFromServer(): Promise<void> {
     if (typeof window === 'undefined') return;
     try {
-      const res = await fetch('/api/v1/tables');
+      const headers: Record<string, string> = {};
+      if (this.lastTablesETag) {
+        headers['If-None-Match'] = this.lastTablesETag;
+      }
+      const res = await fetch('/api/v1/tables', {
+        headers,
+        cache: 'no-store',
+      });
+
+      // HTTP 304 Not Modified: Server state has not changed, 0 bytes body, zero parsing overhead
+      if (res.status === 304) {
+        return;
+      }
+
       if (!res.ok) return;
+
+      const newEtag = res.headers.get('ETag');
+      if (newEtag) {
+        this.lastTablesETag = newEtag;
+      }
+
       const data = await res.json();
       if (data && Array.isArray(data.tables)) {
         data.tables.forEach((serverTable: any) => {
@@ -255,6 +350,21 @@ class CafeStoreManager {
           } catch {}
         });
 
+        // Real-Time Transaction Settlement Synchronization
+        this.eventSource.addEventListener('transaction_settled', (e: MessageEvent) => {
+          try {
+            const tx = JSON.parse(e.data);
+            if (tx && tx.transactionId) {
+              const exists = this.settledTransactions.some((t) => t.transactionId === tx.transactionId);
+              if (!exists) {
+                this.settledTransactions.unshift(tx);
+                this.saveTransactionsToStorage();
+                this.notifyListeners();
+              }
+            }
+          } catch {}
+        });
+
         this.eventSource.onerror = () => {
           if (this.eventSource) {
             this.eventSource.close();
@@ -304,6 +414,7 @@ class CafeStoreManager {
       fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
         body: JSON.stringify({
           tableId,
           status,
@@ -311,9 +422,14 @@ class CafeStoreManager {
           secretCode,
           deviceFingerprint: this.deviceFingerprint,
         }),
-      }).catch(() => {
-        // Fallback for dev/mock mode
-      });
+      })
+      .then((res) => {
+        if (res.ok) {
+          // Immediately align with server single source of truth
+          this.fetchTablesFromServer();
+        }
+      })
+      .catch(() => {});
     } catch {}
   }
 
@@ -509,12 +625,18 @@ class CafeStoreManager {
 
   /**
    * Calculates Real-Time Daily Revenue Analytics vs 15,000 THB Minimum Target
-   * STRICT ZERO BASELINE & NON-REVENUE ISOLATION:
-   * Starts at 0.00 THB. Bot orders are strictly excluded via tx.isBot !== true!
+   * STRICT 12:00:00 PM THAILAND TIME (UTC+7) CUTOFF:
+   * Revenue automatically resets to 0.00 THB at 12:00 PM daily.
+   * Starts with zero baseline (0.00 THB) until real verified transactions arrive in the current cycle.
+   * Bot orders are strictly isolated and excluded via tx.isBot !== true!
    */
   public getRevenueAnalytics(): RevenueAnalytics {
-    // Only genuine customer verified transactions are calculated!
-    const realTransactions = this.settledTransactions.filter((tx) => !tx.isBot);
+    const cycle = getThai12pmCycleWindow();
+
+    // Only genuine customer verified transactions within the CURRENT 12:00 PM Thai cycle are calculated!
+    const realTransactions = this.settledTransactions.filter(
+      (tx) => !tx.isBot && tx.status === 'SETTLED' && cycle.isInCurrentCycle(tx.settledAt || tx.createdAt)
+    );
     const totalSettledAmount = realTransactions.reduce((sum, tx) => sum + tx.amount, 0);
     const dailyTarget = DAILY_REVENUE_TARGET;
     const isTargetAchieved = totalSettledAmount >= dailyTarget;
@@ -531,6 +653,10 @@ class CafeStoreManager {
       percentageRatio,
       totalOrdersCount,
       averageOrderValue,
+      cycleStartFormatted: cycle.cycleStartFormatted,
+      cycleEndFormatted: cycle.cycleEndFormatted,
+      nextResetFormatted: cycle.nextResetFormatted,
+      remainingFormatted: cycle.remainingFormatted,
     };
   }
 
@@ -768,7 +894,8 @@ class CafeStoreManager {
       orderNumber,
       this.activeSession.tableId,
       totalAmount,
-      TARGET_EWALLET_ID
+      TARGET_EWALLET_ID,
+      this.activeSession.secretCode
     );
 
     this.currentTransaction = tx;
@@ -781,8 +908,8 @@ class CafeStoreManager {
       tableId: this.activeSession.tableId,
       sessionId: this.activeSession.sessionId,
       eventType: 'PAYMENT_PENDING',
-      message: `สร้าง PromptPay QR ยอดสุทธิ ฿${totalAmount.toFixed(2)} รหัสคำสั่งซื้อ ${orderNumber}`,
-      metadata: { txId: tx.transactionId, amount: totalAmount },
+      message: `สร้าง PromptPay QR ยอดสุทธิ ฿${totalAmount.toFixed(2)} (Ref1: ${tx.ref1}, Ref2: ${tx.ref2}) รหัสคำสั่งซื้อ ${orderNumber}`,
+      metadata: { txId: tx.transactionId, amount: totalAmount, ref1: tx.ref1, ref2: tx.ref2 },
       timestamp: new Date().toISOString(),
     });
 
@@ -815,13 +942,15 @@ class CafeStoreManager {
       const releasedSessionId = this.activeSession.sessionId;
       const revokedSecretCode = this.activeSession.secretCode;
 
-      // 1. Mark Transaction as SETTLED and attach bank slip proof
+      // 1. Mark Transaction as SETTLED and attach bank slip proof with Ref1 and Ref2
       const cartSnapshot = [...this.cartItems];
       const totalUnits = cartSnapshot.reduce((sum, item) => sum + item.quantity, 0);
 
       const settledTx: PromptPayTransaction = {
         ...this.currentTransaction,
         status: 'SETTLED',
+        ref1: slipResult.ref1 || this.currentTransaction.ref1,
+        ref2: slipResult.ref2 || this.currentTransaction.ref2,
         bankReferenceNo: slipResult.bankReferenceNo,
         senderBank: slipResult.senderBank,
         settledAt: new Date().toISOString(),
@@ -832,6 +961,17 @@ class CafeStoreManager {
 
       // Real-time addition to settled transactions and admin revenue
       this.settledTransactions.unshift(settledTx);
+      this.saveTransactionsToStorage();
+
+      // POST to server database to persist across restarts and devices
+      if (typeof window !== 'undefined') {
+        fetch('/api/v1/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settledTx),
+        }).catch(() => {});
+      }
+
       this.currentTransaction = null;
       this.cartItems = [];
 
@@ -862,12 +1002,15 @@ class CafeStoreManager {
         tableId,
         sessionId: releasedSessionId,
         eventType: 'CHECK_OUT',
-        message: `สคริปต์สแกนตรวจสอบสลิปผ่านสำเร็จ! อ้างอิงธนาคาร: ${slipResult.bankReferenceNo} (${slipResult.senderBank}) ยอดเงิน ฿${settledTx.amount.toFixed(2)} เข้าสู่ระบบรายได้แอดมินทันที ระบบทำการ Checkout และ Purge Device Session สำเร็จ คืนสถานะโต๊ะ ${tableId} เป็นสถานะว่าง (AVAILABLE)`,
+        message: `สคริปต์สแกนตรวจสอบสลิปผ่านสำเร็จ (Non-AI)! Ref 1: ${settledTx.ref1} | Ref 2: ${settledTx.ref2} | อ้างอิงธนาคาร: ${slipResult.bankReferenceNo} (${slipResult.senderBank}) ยอดเงิน ฿${settledTx.amount.toFixed(2)} คืนสถานะโต๊ะ ${tableId} เป็น AVAILABLE`,
         metadata: {
+          ref1: settledTx.ref1,
+          ref2: settledTx.ref2,
           refNo: slipResult.bankReferenceNo,
           bank: slipResult.senderBank,
           amount: settledTx.amount,
           hashMatch: slipResult.hashMatch,
+          verificationEngine: slipResult.verificationEngine,
         },
         timestamp: new Date().toISOString(),
       });
@@ -989,24 +1132,44 @@ class CafeStoreManager {
     this.notifyListeners();
   }
 
-  public verifyAndLoginAdmin(inputPassword: string): boolean {
-    const isValid = verifyAdminPassword(inputPassword);
-    if (isValid) {
-      this.isAdminAuthenticated = true;
-      this.activityLogs.unshift({
-        id: `log_admin_login_${Date.now()}`,
-        tableId: 'SYSTEM',
-        eventType: 'MAINTENANCE',
-        message: 'Admin Authentication Success: Verified via SHA-256 cryptographic hash (Demo Payment Mode Unlocked)',
-        timestamp: new Date().toISOString(),
+  private adminSessionToken: string | null = null;
+
+  public async verifyAndLoginAdmin(inputPassword: string): Promise<boolean> {
+    try {
+      const res = await fetch('/api/v1/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: inputPassword }),
       });
-      this.notifyListeners();
-      return true;
+      const data = await res.json();
+      if (res.ok && data.success) {
+        this.isAdminAuthenticated = true;
+        this.adminSessionToken = data.token || 'admin-session-active';
+        this.activityLogs.unshift({
+          id: `log_admin_login_${Date.now()}`,
+          tableId: 'SYSTEM',
+          eventType: 'MAINTENANCE',
+          message: 'Admin Authentication Success: Verified strictly via Server-Side Authorization',
+          timestamp: new Date().toISOString(),
+        });
+        if (this.activityLogs.length > 100) this.activityLogs.splice(100);
+        this.notifyListeners();
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
-    return false;
   }
 
   public logoutAdmin(): void {
+    if (this.adminSessionToken) {
+      fetch('/api/v1/auth/admin-logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.adminSessionToken}` },
+      }).catch(() => {});
+    }
+    this.adminSessionToken = null;
     this.isAdminAuthenticated = false;
     this.activityLogs.unshift({
       id: `log_admin_logout_${Date.now()}`,
@@ -1015,6 +1178,7 @@ class CafeStoreManager {
       message: 'Admin Logged Out: Demo Payment Mode Relocked',
       timestamp: new Date().toISOString(),
     });
+    if (this.activityLogs.length > 100) this.activityLogs.splice(100);
     this.notifyListeners();
   }
 
@@ -1031,14 +1195,24 @@ class CafeStoreManager {
     const amount = currentTx ? currentTx.amount : this.getCartTotals().totalAmount;
     const demoRef = `ADMIN-DEMO-${Date.now().toString().slice(-8)}`;
 
+    const ref1 = currentTx?.ref1 || `D1${Date.now().toString()}${Math.floor(1000000 + Math.random() * 9000000)}`.slice(0, 22);
+    const ref2 = currentTx?.ref2 || this.activeSession?.secretCode || '888999';
+
     return {
       isValid: true,
       bankReferenceNo: demoRef,
       senderBank: 'ธนาคารกสิกรไทย (K PLUS - Admin Demo Mode)',
       transferredAmount: amount,
       expectedAmount: amount,
+      ref1,
+      ref2,
+      ref1Matched: true,
+      ref2Matched: true,
+      amountMatched: true,
+      watermarkVerified: true,
       timestamp: new Date().toISOString(),
       hashMatch: true,
+      verificationEngine: 'Rule-Based Deterministic Script (Non-AI / Zero External API)',
     };
   }
 }

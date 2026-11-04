@@ -1,0 +1,60 @@
+[
+  {
+    "log_id": "rls_1793783341150_d4e10873",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-04T09:09:01.150Z",
+    "table_id": "T01",
+    "session_id": "AUTO_PURGE",
+    "user_role": "CUSTOMER",
+    "event_type": "CHECK_OUT",
+    "client_ip": "127.0.0.1",
+    "user_agent": "curl/7.88.1",
+    "status": "SUCCESS",
+    "message": "คืนสถานะโต๊ะ T01 เป็น AVAILABLE สำเร็จ (Checkout/Release)"
+  },
+  {
+    "log_id": "rls_1793783329036_00efd1ea",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-04T09:08:49.036Z",
+    "table_id": "T01",
+    "session_id": "SESS-TEST-001",
+    "user_role": "CUSTOMER",
+    "event_type": "CHECK_IN",
+    "client_ip": "127.0.0.1",
+    "user_agent": "curl/7.88.1",
+    "status": "SUCCESS",
+    "message": "จองและเปิดใช้งานโต๊ะ T01 สำเร็จ รหัสลับ OTP ผูกเซสชัน",
+    "metadata": {}
+  },
+  {
+    "log_id": "rls_1793783312166_da54ba47",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-04T09:08:32.166Z",
+    "table_id": "SYSTEM",
+    "session_id": "462855a5",
+    "user_role": "ADMIN",
+    "event_type": "ADMIN_ACCESS",
+    "client_ip": "127.0.0.1",
+    "user_agent": "curl/7.88.1",
+    "status": "SUCCESS",
+    "message": "Admin Authentication Success. Session Token Issued."
+  },
+  {
+    "log_id": "rls_1793783297380_245fb971",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-04T09:08:17.380Z",
+    "table_id": "SYSTEM",
+    "session_id": "SYS_BOOT",
+    "user_role": "SYSTEM_CRON",
+    "event_type": "SYSTEM_INIT",
+    "client_ip": "127.0.0.1",
+    "user_agent": "Node.js Cluster Core Engine",
+    "status": "SUCCESS",
+    "message": "ระบบเริ่มต้นฐานข้อมูลจำลอง PostgreSQL 16 และ RLS Data Layer บน Server Disk (/server_data/*.json) เรียบร้อยแล้ว",
+    "metadata": {
+      "tablesCount": 20,
+      "historicalTxCount": 117,
+      "dailyCycleCutoff": "12:00:00 PM Thai Time (UTC+7)"
+    }
+  }
+]

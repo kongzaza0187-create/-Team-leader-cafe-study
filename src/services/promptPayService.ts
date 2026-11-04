@@ -50,6 +50,33 @@ export function calculateCRC16(data: string): string {
 }
 
 /**
+ * Generates Reference 1 (Ref 1):
+ * Must start with 'D1' followed by exactly 20 digits (Total length: 22 characters).
+ */
+export function generateRef1(orderNumber?: string): string {
+  const timestampStr = Date.now().toString(); // 13 digits
+  const randomSuffix = Math.floor(1000000 + Math.random() * 9000000).toString(); // 7 digits
+  const digits20 = (timestampStr + randomSuffix).slice(0, 20).padStart(20, '0');
+  return `D1${digits20}`;
+}
+
+/**
+ * Validates Reference 1 structure:
+ * Begins with 'D1' followed by 20 numerical digits.
+ */
+export function isValidRef1(ref1: string): boolean {
+  return /^D1\d{20}$/.test(ref1);
+}
+
+/**
+ * Validates Reference 2 structure:
+ * Exactly 6 numerical digits representing table booking secret code.
+ */
+export function isValidRef2(ref2: string): boolean {
+  return /^\d{6}$/.test(ref2);
+}
+
+/**
  * Formats an EMVCo Tag-Length-Value chunk
  */
 function formatTLV(tag: string, value: string): string {
@@ -58,16 +85,55 @@ function formatTLV(tag: string, value: string): string {
 }
 
 /**
- * Generates the official PromptPay EMVCo QR Payload with locked amount
+ * Formats a Date object into YYYYMMDDHHmmss (14 digits)
+ */
+export function formatTimestampSeconds(d: Date = new Date()): string {
+  const y = d.getFullYear().toString();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const sec = String(d.getSeconds()).padStart(2, '0');
+  return `${y}${m}${day}${h}${min}${sec}`;
+}
+
+/**
+ * Formats a Date object into localized Thai date-time string with seconds
+ */
+export function formatThaiDateTimeWithSeconds(d: Date = new Date()): string {
+  const day = String(d.getDate()).padStart(2, '0');
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const y = d.getFullYear();
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const sec = String(d.getSeconds()).padStart(2, '0');
+  return `${day}/${m}/${y} เวลา ${h}:${min}:${sec} น.`;
+}
+
+/**
+ * Generates the official PromptPay EMVCo QR Payload with locked amount, Ref1, Ref2, and creation timestamp
  * @param eWalletId e.g. '004999233365393' (15 digits)
  * @param amount Total bill amount in THB
+ * @param ref1 Starts with 'D1' + 20 digits (22 chars)
+ * @param ref2 6 digits from table booking
+ * @param tableId e.g. 'T01'
+ * @param createdTimestamp YYYYMMDDHHmmss (14 digits)
  */
-export function generatePromptPayPayload(eWalletId: string, amount: number): {
+export function generatePromptPayPayload(
+  eWalletId: string,
+  amount: number,
+  ref1: string,
+  ref2: string,
+  tableId: string = 'T01',
+  createdTimestamp?: string
+): {
   payload: string;
   crc16: string;
+  timestamp: string;
 } {
   // Format Amount string to 2 decimal places (e.g. "140.00")
   const amountStr = amount.toFixed(2);
+  const ts = createdTimestamp || formatTimestampSeconds();
 
   // 1. Tag 00: Payload Format Indicator = '01'
   const tag00 = formatTLV('00', '01');
@@ -92,16 +158,28 @@ export function generatePromptPayPayload(eWalletId: string, amount: number): {
   // 6. Tag 58: Country Code (TH)
   const tag58 = formatTLV('58', 'TH');
 
-  // 7. Base Payload without checksum
-  const basePayload = `${tag00}${tag01}${tag29}${tag53}${tag54}${tag58}6304`;
+  // 7. Tag 62: Additional Data Field Template
+  // Subtag 01: Bill Number / Ref 1 (D1 + 20 digits)
+  // Subtag 02: Reference 2 (6 digits table secret code)
+  // Subtag 05: Transaction Timestamp (YYYYMMDDHHmmss - down to second)
+  // Subtag 07: Terminal Label (tableId)
+  const subTag01 = formatTLV('01', ref1);
+  const subTag02 = formatTLV('02', ref2);
+  const subTag05 = formatTLV('05', ts); // Timestamp down to seconds embedded in QR code
+  const subTag07 = formatTLV('07', tableId);
+  const tag62 = formatTLV('62', `${subTag01}${subTag02}${subTag05}${subTag07}`);
 
-  // 8. Calculate CRC16 checksum over base payload
+  // 8. Base Payload without checksum
+  const basePayload = `${tag00}${tag01}${tag29}${tag53}${tag54}${tag58}${tag62}6304`;
+
+  // 9. Calculate CRC16 checksum over base payload
   const crc16 = calculateCRC16(basePayload);
   const fullPayload = `${basePayload}${crc16}`;
 
   return {
     payload: fullPayload,
     crc16,
+    timestamp: ts,
   };
 }
 
@@ -126,17 +204,36 @@ export async function renderQRCodeDataUrl(payload: string): Promise<string> {
 }
 
 /**
- * Creates an Idempotent Payment Transaction object
+ * Creates an Idempotent Payment Transaction object with Ref1 (D1 + 20 digits), Ref2 (6-digit table code),
+ * and precise timestamp down to the second (YYYYMMDDHHmmss) embedded in the QR payload.
  */
 export function createPaymentTransaction(
   orderNumber: string,
   tableId: string,
   amount: number,
-  targetEWalletId: string = TARGET_EWALLET_ID
+  targetEWalletId: string = TARGET_EWALLET_ID,
+  secretCode?: string
 ): PromptPayTransaction {
-  const { payload, crc16 } = generatePromptPayPayload(targetEWalletId, amount);
+  const now = new Date();
+  const createdAtTimestamp = formatTimestampSeconds(now);
+  const createdAtFormatted = formatThaiDateTimeWithSeconds(now);
+
+  // Generate Ref 1 starting with 'D1' followed by 20 digits (22 characters)
+  const ref1 = generateRef1(orderNumber);
+
+  // Ref 2 is the 6-digit secret code that the table reserved
+  const ref2 = secretCode ? secretCode.padStart(6, '0').slice(0, 6) : Math.floor(100000 + Math.random() * 900000).toString();
+
+  const { payload, crc16 } = generatePromptPayPayload(
+    targetEWalletId,
+    amount,
+    ref1,
+    ref2,
+    tableId,
+    createdAtTimestamp
+  );
   const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const idempotencyKey = `idemp_${orderNumber}_${amount.toFixed(2)}`;
+  const idempotencyKey = `idemp_${orderNumber}_${amount.toFixed(2)}_${ref1}`;
 
   return {
     transactionId,
@@ -145,9 +242,13 @@ export function createPaymentTransaction(
     tableId,
     targetEWalletId,
     amount,
+    ref1,
+    ref2,
     emvcoPayload: payload,
     crc16,
     status: 'PENDING_VERIFICATION',
-    createdAt: new Date().toISOString(),
+    createdAt: now.toISOString(),
+    createdAtTimestamp,
+    createdAtFormatted,
   };
 }

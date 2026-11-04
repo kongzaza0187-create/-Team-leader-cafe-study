@@ -87,9 +87,9 @@ export const TableGridSystem: React.FC<TableGridSystemProps> = ({
                     alt={isAvailable ? 'โต๊ะว่าง (พร้อมใช้งาน)' : 'โต๊ะเต็ม (กำลังใช้งาน)'}
                     className={`${
                       variant === 'tablet'
-                        ? 'w-28 h-28 xl:w-32 xl:h-32'
-                        : 'w-20 h-20 sm:w-24 sm:h-24'
-                    } object-contain filter drop-shadow-2xl transition-transform duration-300 hover:scale-110 group-hover:scale-105`}
+                        ? 'w-24 h-24 xl:w-28 xl:h-28'
+                        : 'w-16 h-16 sm:w-20 sm:h-20'
+                    } object-contain filter drop-shadow-2xl transition-transform duration-300 hover:scale-105 group-hover:scale-105`}
                     loading="eager"
                     decoding="sync"
                   />

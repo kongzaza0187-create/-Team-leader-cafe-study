@@ -20,11 +20,13 @@ import {
   BillBreakdown, 
   PromptPayTransaction, 
   ConcurrencyMetrics,
-  RevenueAnalytics
+  RevenueAnalytics,
+  AppLanguage
 } from './types';
 import { SlipVerificationResult } from './services/slipVerificationService';
 import { MobileFrame } from './components/MobileFrame';
-import { Navigation, NavigationTab } from './components/Navigation';
+import { TopNavigationBar, NavigationTab } from './components/TopNavigationBar';
+import { LanguageGatewayScreen } from './components/LanguageGatewayScreen';
 import { TableSelectionScreen } from './components/TableSelectionScreen';
 import { MenuScreen } from './components/MenuScreen';
 import { FloatingCartSheet } from './components/FloatingCartSheet';
@@ -69,6 +71,19 @@ export default function App() {
   const [settledTransactions, setSettledTransactions] = useState<PromptPayTransaction[]>(cafeStore.getSettledTransactions());
   const [metrics, setMetrics] = useState<ConcurrencyMetrics>(cafeStore.getMetrics());
   const [revenueAnalytics, setRevenueAnalytics] = useState<RevenueAnalytics>(cafeStore.getRevenueAnalytics());
+
+  // Multi-Language Session Locking State (Initial Landing Gateway)
+  const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('study_cafe_session_lang');
+        if (cached && ['th', 'en', 'ja', 'pt', 'zh'].includes(cached)) {
+          return cached as AppLanguage;
+        }
+      } catch {}
+    }
+    return null;
+  });
 
   // UI Modals
   const [isCustomizerOpen, setIsCustomizerOpen] = useState<boolean>(false);
@@ -167,6 +182,20 @@ export default function App() {
   const currentTable = tables.find((t) => t.tableId === activeSession?.tableId);
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
+  // Multi-Language Selection Gateway as Initial App Load Screen
+  if (!selectedLanguage) {
+    return (
+      <LanguageGatewayScreen
+        onSelectLanguage={(lang) => {
+          setSelectedLanguage(lang);
+          try {
+            sessionStorage.setItem('study_cafe_session_lang', lang);
+          } catch {}
+        }}
+      />
+    );
+  }
+
   // Render Dedicated Tablet / iPad View (Desktop-Class Split in Landscape, Spacious Dedicated View in Portrait)
   if (deviceInfo.device === 'tablet') {
     return (
@@ -180,6 +209,7 @@ export default function App() {
           metrics={metrics}
           settledTransactions={settledTransactions}
           revenueAnalytics={revenueAnalytics}
+          language={selectedLanguage}
           onSelectAndOccupyTable={handleSelectAndOccupyTable}
           onAddToCart={handleAddToCart}
           onUpdateCartQty={handleUpdateCartQty}
@@ -204,22 +234,23 @@ export default function App() {
     );
   }
 
-  const shouldHideBottomNav = isCustomizerOpen || isCartOpen || isPaymentOpen || tableRequiredPrompt;
-
-  // Render Mobile View (One-Handed Edge-to-Edge with Docked Navigation)
+  // Render Mobile View (Unified Top Navigation Bar, Zero Bottom Navigation)
   return (
     <MobileFrame
       activeTableId={activeSession?.tableId}
       secretCode={activeSession?.secretCode}
-      hideNavigation={shouldHideBottomNav}
-      navigation={
-        <Navigation
+      topBar={
+        <TopNavigationBar
           activeTab={activeTab}
           onTabChange={handleTabChange}
-          cartCount={cartCount}
-          hasActiveSession={!!activeSession}
+          language={selectedLanguage}
           activeTableId={activeSession?.tableId}
+          secretCode={activeSession?.secretCode}
+          cartCount={cartCount}
+          cartTotal={totals.totalAmount}
           onOpenCart={() => setIsCartOpen(true)}
+          availableTablesCount={tables.filter((t) => t.status === 'AVAILABLE').length}
+          totalTablesCount={tables.length}
         />
       }
     >
@@ -235,6 +266,7 @@ export default function App() {
           <TableSelectionScreen
             tables={tables}
             activeSession={activeSession}
+            language={selectedLanguage}
             onSelectAndOccupyTable={handleSelectAndOccupyTable}
             onNavigateToMenu={() => handleTabChange('menu')}
           />
@@ -243,6 +275,7 @@ export default function App() {
         {activeTab === 'menu' && (
           <MenuScreen
             activeSession={activeSession}
+            language={selectedLanguage}
             onAddToCart={handleAddToCart}
             onNavigateToTables={() => handleTabChange('tables')}
             onOpenCart={() => setIsCartOpen(true)}
@@ -268,6 +301,7 @@ export default function App() {
             activityLogs={activityLogs}
             settledTransactions={settledTransactions}
             revenueAnalytics={revenueAnalytics}
+            language={selectedLanguage}
             onTriggerFailoverTest={handleTriggerFailover}
             onForceResetTable={handleForceResetTable}
           />
@@ -281,6 +315,7 @@ export default function App() {
         items={cartItems}
         totals={totals}
         activeSession={activeSession}
+        language={selectedLanguage}
         onUpdateQty={handleUpdateCartQty}
         onClearCart={handleClearCart}
         onProceedToPayment={handleProceedToPayment}

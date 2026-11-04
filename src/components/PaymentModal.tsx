@@ -10,7 +10,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { PromptPayTransaction, BillBreakdown, TableSession } from '../types';
-import { renderQRCodeDataUrl } from '../services/promptPayService';
+import { renderQRCodeDataUrl, formatThaiDateTimeWithSeconds } from '../services/promptPayService';
 import { 
   verifyBankSlip, 
   SlipVerificationResult 
@@ -55,6 +55,7 @@ export const PaymentModal: React.FC<Props> = ({
 }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
+  const [copiedRef, setCopiedRef] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
@@ -74,7 +75,44 @@ export const PaymentModal: React.FC<Props> = ({
   const [reviewComment, setReviewComment] = useState<string>('');
   const [isReviewSubmitted, setIsReviewSubmitted] = useState<boolean>(false);
 
+  // 10-Minute Countdown Timer (600 seconds)
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(600);
+  const [isQrExpired, setIsQrExpired] = useState<boolean>(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSecondsRemaining(600);
+    setIsQrExpired(false);
+
+    const timer = setInterval(() => {
+      setSecondsRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsQrExpired(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [transaction.transactionId]);
+
+  const formatCountdown = (totalSeconds: number): string => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const handleRegenerateQR = () => {
+    cafeStore.initiatePromptPayCheckout();
+    setSecondsRemaining(600);
+    setIsQrExpired(false);
+    try {
+      audioFeedbackService.playTactileClickSound();
+    } catch {}
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -94,40 +132,65 @@ export const PaymentModal: React.FC<Props> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setVerificationError(null);
-      audioFeedbackService.playTactileClickSound();
-    }
+  const handleCopyRef = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedRef(type);
+    audioFeedbackService.playTactileClickSound();
+    setTimeout(() => setCopiedRef(null), 2000);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  // Run the automated non-AI verification script
-  const handleExecuteSlipVerification = async () => {
-    if (!selectedFile) {
-      setVerificationError('กรุณาเลือกไฟล์สลิปก่อนทำการตรวจสอบ');
+    // Strict Client-Side File Size Validation (Max 5MB)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      setVerificationError('ขนาดไฟล์ภาพสลิปต้องไม่เกิน 5 MB');
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      e.target.value = '';
       return;
     }
 
-    setIsVerifying(true);
+    // Strict Client-Side MIME Whitelist Validation
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      setVerificationError('อนุญาตเฉพาะไฟล์รูปภาพนามสกุล .JPG, .PNG หรือ .WEBP เท่านั้น');
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      e.target.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
     setVerificationError(null);
     audioFeedbackService.playTactileClickSound();
 
+    // Automatically trigger non-AI background verification immediately without requiring extra buttons
+    executeSilentVerification(file);
+  };
+
+  // Run the automated non-AI verification script silently in background
+  const executeSilentVerification = async (fileToVerify: File | Blob) => {
+    setIsVerifying(true);
+    setVerificationError(null);
+
     try {
-      // Execute Automated Rule-Based Script
+      // Execute Automated Rule-Based Script with Ref1 (D1 + 20 digits) and Ref2 (6 digits table code)
       const result = await verifyBankSlip(
-        selectedFile,
+        fileToVerify,
         totals.totalAmount,
-        transaction.orderNumber
+        transaction.orderNumber,
+        transaction.ref1,
+        transaction.ref2 || activeSession.secretCode
       );
 
       setIsVerifying(false);
 
       if (!result.isValid) {
-        setVerificationError(result.failureReason || 'สลิปไม่ผ่านการตรวจสอบความถูกต้อง');
+        setVerificationError(result.failureReason || 'สลิปไม่ผ่านการตรวจสอบความถูกต้อง หรือยอดเงินไม่ตรงกับบิล');
         return;
       }
 
@@ -283,66 +346,99 @@ export const PaymentModal: React.FC<Props> = ({
                   </span>
                 </div>
 
-                {/* QR Code Canvas */}
-                <div className="w-52 h-52 mx-auto p-3 bg-white rounded-2xl shadow-xl flex items-center justify-center border-4 border-[#282830]">
-                  {qrDataUrl ? (
-                    <img
-                      src={qrDataUrl}
-                      alt="PromptPay QR Code"
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-stone-500">
-                      <CanvasIcon name="refresh" size={24} color="#71717A" animateSpin />
-                      <span className="text-[10px] font-mono">กำลังสร้าง QR...</span>
+                {/* 10-MINUTE REAL-TIME COUNTDOWN TIMER */}
+                {isQrExpired ? (
+                  <div className="p-4 rounded-2xl bg-[#EF4444]/15 border border-[#EF4444]/40 text-center space-y-2.5 my-2">
+                    <div className="w-10 h-10 rounded-full bg-[#EF4444]/20 flex items-center justify-center mx-auto text-[#EF4444]">
+                      <CanvasIcon name="alert" size={20} color="#EF4444" />
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <span className="text-xs font-bold text-[#EF4444] block">
+                        QR Code หมดอายุแล้ว (เกินกำหนด 10 นาที)
+                      </span>
+                      <span className="text-[10px] text-stone-400">
+                        กรุณากดสร้าง QR Code ใหม่เพื่อความปลอดภัย
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleRegenerateQR}
+                      className="btn-tactile-orange px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5"
+                    >
+                      <CanvasIcon name="refresh" size={13} color="#0B0B0C" />
+                      <span>สร้าง QR Code ใหม่ (นับเวลา 10 นาที)</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* QR Code Canvas */}
+                    <div className="w-52 h-52 mx-auto p-3 bg-white rounded-2xl shadow-xl flex items-center justify-center border-4 border-[#282830]">
+                      {qrDataUrl ? (
+                        <img
+                          src={qrDataUrl}
+                          alt="PromptPay QR Code"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-stone-500">
+                          <CanvasIcon name="refresh" size={24} color="#71717A" animateSpin />
+                          <span className="text-[10px] font-mono">กำลังสร้าง QR...</span>
+                        </div>
+                      )}
+                    </div>
 
-                {/* Security Badge (E-Wallet ID String strictly hidden) */}
+                    {/* Countdown Timer Badge */}
+                    <div
+                      className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-mono font-bold transition-colors ${
+                        secondsRemaining <= 120
+                          ? 'bg-[#EF4444]/15 border-[#EF4444]/40 text-[#EF4444] animate-pulse'
+                          : 'bg-[#FF6B00]/10 border-[#FF6B00]/30 text-[#FF8C33]'
+                      }`}
+                    >
+                      <CanvasIcon
+                        name="clock"
+                        size={14}
+                        color={secondsRemaining <= 120 ? '#EF4444' : '#FF6B00'}
+                      />
+                      <span>
+                        กรุณาสแกนชำระเงินภายใน: {formatCountdown(secondsRemaining)} นาที
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {/* Security Badge */}
                 <div className="flex items-center justify-center gap-1.5 text-stone-400 text-[11px]">
                   <CanvasIcon name="lock" size={13} color="#10B981" />
                   <span className="text-stone-300">
                     ยอดเงินล็อกไว้ที่ <strong className="text-[#FF6B00] font-mono">฿{totals.totalAmount.toFixed(2)}</strong> ตามบิล
                   </span>
                 </div>
-                <p className="text-[10px] text-stone-500 font-mono">
-                  CRC-16: {transaction.crc16} • 24H Instant Settlement Engine
-                </p>
+
+                {/* Second-Precision Creation Timestamp Badge */}
+                <div className="text-[11px] text-stone-400 font-mono flex items-center justify-center gap-1.5 pt-1">
+                  <CanvasIcon name="clock" size={12} color="#71717A" />
+                  <span>
+                    สร้างเมื่อ: <strong className="text-stone-300">{transaction.createdAtFormatted || formatThaiDateTimeWithSeconds(new Date(transaction.createdAt))}</strong>
+                  </span>
+                </div>
               </div>
 
-              {/* Copy Payload Button */}
-              <button
-                onClick={handleCopyPayload}
-                className="btn-tactile-dark w-full py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5"
-              >
-                {copied ? (
-                  <>
-                    <CanvasIcon name="check" size={14} color="#10B981" />
-                    <span>คัดลอก Raw EMVCo Payload สำเร็จ</span>
-                  </>
-                ) : (
-                  <>
-                    <CanvasIcon name="copy" size={14} color="#A1A1AA" />
-                    <span>คัดลอกข้อความ Payload</span>
-                  </>
-                )}
-              </button>
-
-              {/* SLIP UPLOAD & AUTOMATED SCRIPT VERIFICATION SECTION */}
+              {/* SLIP UPLOAD & AUTOMATED BACKEND VERIFICATION SECTION */}
               <div className="p-4 rounded-2xl bg-[#121214] border border-[#282830] space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CanvasIcon name="upload" size={15} color="#FF6B00" />
                     <span className="font-bold text-stone-200 text-xs">
-                      อัปโหลดสลิปธนาคาร (Slip Upload)
+                      อัปโหลดสลิปยืนยันการชำระเงิน
                     </span>
                   </div>
-                  <span className="text-[10px] text-stone-500 font-mono">Automated Script</span>
+                  <span className="px-2 py-0.5 rounded bg-[#10B981]/15 text-[#34D399] text-[9px] font-mono font-bold border border-[#10B981]/30">
+                    ตรวจสลิปอัตโนมัติ
+                  </span>
                 </div>
 
                 <p className="text-[11px] text-stone-400 leading-relaxed">
-                  เมื่อโอนเงินเรียบร้อยแล้ว กรุณาอัปโหลดสลิปการโอนเงินจริงจาก Mobile Banking เพื่อตรวจสอบความถูกต้องด้วยสคริปต์สแกนอัตโนมัติ ระบบจะทำการ Checkout และปล่อยสถานะโต๊ะว่างทันที
+                  เมื่อโอนเงินเรียบร้อยแล้ว แตะเลือกไฟล์สลิป ระบบจะตรวจสอบความถูกต้อง ยอดเงิน และตรวจจับรายการซ้ำในระบบหลังบ้านอัตโนมัติทันที
                 </p>
 
                 {/* Hidden File Input */}
@@ -354,23 +450,38 @@ export const PaymentModal: React.FC<Props> = ({
                   className="hidden"
                 />
 
-                {/* Upload Picker Trigger Box */}
+                {/* Upload Picker Trigger Box (Runs Verification Automatically in Background) */}
                 <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-3.5 rounded-xl border border-dashed border-[#282830] hover:border-[#FF6B00]/60 bg-[#1A1A1E] text-center cursor-pointer transition flex flex-col items-center gap-1.5"
+                  onClick={() => !isVerifying && fileInputRef.current?.click()}
+                  className={`p-4 rounded-xl border border-dashed transition flex flex-col items-center gap-2 ${
+                    isVerifying
+                      ? 'border-[#FF6B00] bg-[#FF6B00]/10 cursor-wait'
+                      : 'border-[#282830] hover:border-[#FF6B00]/60 bg-[#1A1A1E] cursor-pointer'
+                  }`}
                 >
-                  {previewUrl ? (
-                    <div className="flex items-center gap-2 text-[#10B981] text-xs">
-                      <CanvasIcon name="check-circle" size={16} color="#10B981" />
-                      <span>แนบไฟล์สลิปจริงเรียบร้อยแล้ว (แตะเพื่อเปลี่ยนไฟล์)</span>
+                  {isVerifying ? (
+                    <div className="flex flex-col items-center gap-2 text-[#FF6B00] py-2">
+                      <CanvasIcon name="refresh" size={24} color="#FF6B00" animateSpin />
+                      <span className="text-xs font-bold">ระบบกำลังตรวจสอบความถูกต้องของสลิปในเบื้องหลัง...</span>
+                      <span className="text-[10px] text-stone-400">ตรวจสอบความถูกต้อง ลายน้ำธนาคาร และตรวจจับสลิปซ้ำ</span>
+                    </div>
+                  ) : previewUrl ? (
+                    <div className="flex flex-col items-center gap-1.5 text-stone-200">
+                      <div className="flex items-center gap-2 text-[#10B981] text-xs font-semibold">
+                        <CanvasIcon name="check-circle" size={16} color="#10B981" />
+                        <span>แนบไฟล์สลิปเรียบร้อยแล้ว (แตะเพื่อเปลี่ยนไฟล์)</span>
+                      </div>
+                      <span className="text-[10px] text-stone-400">แตะเพื่อเปลี่ยนรูปสลิปใหม่หากต้องการ</span>
                     </div>
                   ) : (
                     <>
-                      <CanvasIcon name="file" size={20} color="#71717A" />
-                      <span className="text-xs text-stone-300 font-medium">
+                      <CanvasIcon name="file" size={24} color="#71717A" />
+                      <span className="text-xs text-stone-200 font-semibold">
                         แตะเพื่อเลือกรูปภาพสลิปจริงจากเครื่อง
                       </span>
-                      <span className="text-[10px] text-stone-500">รองรับไฟล์สลิป JPG, PNG จากทุกแอปธนาคาร</span>
+                      <span className="text-[10px] text-stone-400">
+                        ระบบจะตรวจสอบสลิปอัตโนมัติในเบื้องหลังทันทีที่เลือกรูปภาพ
+                      </span>
                     </>
                   )}
                 </div>
@@ -382,29 +493,6 @@ export const PaymentModal: React.FC<Props> = ({
                     <span>{verificationError}</span>
                   </div>
                 )}
-
-                {/* Verification Action CTA */}
-                <button
-                  onClick={handleExecuteSlipVerification}
-                  disabled={!selectedFile || isVerifying}
-                  className={`w-full py-3.5 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all ${
-                    selectedFile && !isVerifying
-                      ? 'btn-tactile-orange'
-                      : 'bg-[#222228] text-stone-500 cursor-not-allowed'
-                  }`}
-                >
-                  {isVerifying ? (
-                    <>
-                      <CanvasIcon name="refresh" size={15} color="#0B0B0C" animateSpin />
-                      <span>สคริปต์กำลังวิเคราะห์พิกเซลและยอดเงิน...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CanvasIcon name="shield" size={15} color="#0B0B0C" />
-                      <span>ตรวจสอบสลิป & Checkout อัตโนมัติ</span>
-                    </>
-                  )}
-                </button>
 
                 {/* ADMIN-ONLY DEMO PAYMENT TEST RUNNER (STRICTLY HIDDEN FROM REGULAR USERS) */}
                 {isAdmin && (
@@ -421,7 +509,7 @@ export const PaymentModal: React.FC<Props> = ({
                       </span>
                     </div>
                     <p className="text-[10px] text-stone-300 leading-relaxed">
-                      ปลดล็อคเฉพาะผู้ดูแลระบบที่ยืนยันตัวตนด้วยรหัสผ่าน SHA-256 สำเร็จ สามารถจำลองการชำระเงินเพื่อทดสอบการทำงานของระบบ Checkout และการคืนสถานะโต๊ะได้ทันที (ลูกค้าทั่วไปจะไม่มีสิทธิ์เข้าถึงหรือเห็นส่วนนี้)
+                      สำหรับผู้ดูแลระบบ: จำลองการชำระเงินเพื่อทดสอบการทำงานของระบบ Checkout และการคืนสถานะโต๊ะได้ทันที
                     </p>
                     <button
                       onClick={handleAdminDemoPayment}
@@ -447,18 +535,22 @@ export const PaymentModal: React.FC<Props> = ({
                   CHECKOUT COMPLETED
                 </span>
                 <h4 className="text-base font-bold text-stone-100 mt-0.5">
-                  ตรวจสอบสลิป & ชำระเงินสำเร็จ
+                  ตรวจสอบสลิป &amp; ชำระเงินสำเร็จ
                 </h4>
                 <p className="text-[11px] text-stone-400">
                   ขอบคุณที่ใช้บริการ Study Café 24/7
                 </p>
               </div>
 
-              {/* Settlement Summary Receipt */}
-              <div className="p-3 rounded-2xl bg-[#121214] border border-[#282830] text-left space-y-1.5 text-[11px]">
+              {/* Settlement Summary Receipt (Customer-Facing Clean Receipt) */}
+              <div className="p-3.5 rounded-2xl bg-[#121214] border border-[#282830] text-left space-y-2 text-[11px]">
                 <div className="flex justify-between">
-                  <span className="text-stone-400">เลขอ้างอิงธนาคาร:</span>
-                  <span className="font-mono text-stone-200 font-bold">{settledResult.receipt.bankReferenceNo}</span>
+                  <span className="text-stone-400">หมายเลขคำสั่งซื้อ:</span>
+                  <span className="font-mono text-stone-200 font-bold">{settledResult.receipt.orderNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-stone-400">เลขอ้างอิงธุรกรรมธนาคาร:</span>
+                  <span className="font-mono text-[#FF8C33] font-bold">{settledResult.receipt.bankReferenceNo}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-stone-400">ยอดเงินที่ชำระ:</span>
@@ -467,6 +559,10 @@ export const PaymentModal: React.FC<Props> = ({
                 <div className="flex justify-between">
                   <span className="text-stone-400">สถานะโต๊ะ {settledResult.tableId}:</span>
                   <span className="text-[#34D399] font-bold">เปลี่ยนเป็น ว่าง (AVAILABLE) เรียบร้อย</span>
+                </div>
+                <div className="flex justify-between pt-1.5 border-t border-[#282830] text-[10px]">
+                  <span className="text-stone-500">เวลาที่ชำระเงิน:</span>
+                  <span className="text-stone-400 font-mono">{formatThaiDateTimeWithSeconds(new Date(settledResult.receipt.settledAt || Date.now()))}</span>
                 </div>
               </div>
 
@@ -578,6 +674,14 @@ export const PaymentModal: React.FC<Props> = ({
               <div className="flex justify-between">
                 <span className="text-stone-400">เลขที่คำสั่งซื้อ:</span>
                 <span className="font-mono text-[#FF8C33] font-bold">{settledResult.receipt.orderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-400">Ref 1 (D1 + 20 หลัก):</span>
+                <span className="font-mono text-[#FF8C33] font-bold text-[11px]">{settledResult.receipt.ref1}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-400">Ref 2 (รหัสโต๊ะ 6 หลัก):</span>
+                <span className="font-mono text-[#34D399] font-bold">{settledResult.receipt.ref2}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-stone-400">ยอดชำระสุทธิ:</span>

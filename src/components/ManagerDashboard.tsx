@@ -14,7 +14,8 @@ import {
   ConcurrencyMetrics, 
   TableActivityLog, 
   PromptPayTransaction,
-  RevenueAnalytics
+  RevenueAnalytics,
+  AppLanguage
 } from '../types';
 import { cafeStore } from '../services/cafeStore';
 import { audioFeedbackService } from '../services/audioFeedbackService';
@@ -29,6 +30,7 @@ interface Props {
   activityLogs: TableActivityLog[];
   settledTransactions: PromptPayTransaction[];
   revenueAnalytics: RevenueAnalytics;
+  language?: AppLanguage;
   onTriggerFailoverTest: () => void;
   onForceResetTable: (tableId: string) => void;
 }
@@ -39,6 +41,7 @@ export const ManagerDashboard: React.FC<Props> = ({
   activityLogs,
   settledTransactions,
   revenueAnalytics,
+  language,
   onTriggerFailoverTest,
   onForceResetTable,
 }) => {
@@ -51,23 +54,58 @@ export const ManagerDashboard: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<'ANALYTICS' | 'REVENUE' | 'REVIEWS' | 'BOT_TEST' | 'METRICS' | 'TABLES' | 'AUDIT'>('ANALYTICS');
   const [logFilter, setLogFilter] = useState<string>('ALL');
 
-  // Verify Admin Password using SHA-256 cryptographic check
-  const handleVerifyPassword = (e: React.FormEvent) => {
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [serverRlsLogs, setServerRlsLogs] = useState<any[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState<boolean>(false);
+
+  const fetchServerRlsLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      const res = await fetch('/api/v1/admin/audit-logs?limit=150');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.logs && Array.isArray(data.logs)) {
+          setServerRlsLogs(data.logs);
+        }
+      }
+    } catch {}
+    finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (activeTab === 'AUDIT' && isAuthenticated) {
+      fetchServerRlsLogs();
+    }
+  }, [activeTab, isAuthenticated]);
+
+  // Verify Admin Password strictly against server-side authorization endpoint
+  const handleVerifyPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!passwordInput.trim() || isVerifying) return;
     try {
       audioFeedbackService.playTactileClickSound();
     } catch {}
     
-    const isSuccess = cafeStore.verifyAndLoginAdmin(passwordInput);
-    if (isSuccess) {
-      setIsAuthenticated(true);
-      setAuthError(null);
-      setPasswordInput('');
-      try {
-        audioFeedbackService.playSuccessChime();
-      } catch {}
-    } else {
-      setAuthError('รหัสผ่านไม่ถูกต้อง (การเข้ารหัส SHA-256 ไม่ตรงกัน) กรุณาลองใหม่อีกครั้ง');
+    setIsVerifying(true);
+    setAuthError(null);
+    try {
+      const isSuccess = await cafeStore.verifyAndLoginAdmin(passwordInput.trim());
+      if (isSuccess) {
+        setIsAuthenticated(true);
+        setAuthError(null);
+        setPasswordInput('');
+        try {
+          audioFeedbackService.playSuccessChime();
+        } catch {}
+      } else {
+        setAuthError('รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่อีกครั้ง');
+      }
+    } catch {
+      setAuthError('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -139,10 +177,11 @@ export const ManagerDashboard: React.FC<Props> = ({
 
           <button
             type="submit"
-            className="btn-tactile-orange w-full py-3 rounded-xl text-xs flex items-center justify-center gap-2"
+            disabled={isVerifying}
+            className="btn-tactile-orange w-full py-3 rounded-xl text-xs flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <CanvasIcon name="key" size={14} color="#0B0B0C" />
-            <span>เข้าสู่ระบบหลังบ้าน (Admin Login)</span>
+            <CanvasIcon name={isVerifying ? "refresh" : "key"} size={14} color="#0B0B0C" animateSpin={isVerifying} />
+            <span>{isVerifying ? 'กำลังตรวจสอบสิทธิ์...' : 'เข้าสู่ระบบหลังบ้าน (Admin Login)'}</span>
           </button>
         </form>
       </div>
@@ -160,9 +199,6 @@ export const ManagerDashboard: React.FC<Props> = ({
               <h2 className="text-xs font-bold text-stone-100 uppercase tracking-wide">
                 Admin Control Room
               </h2>
-              <span className="px-1.5 py-0.2 rounded bg-[#FF6B00]/20 text-[#FF6B00] text-[9px] font-mono font-bold">
-                ROOT AUTH
-              </span>
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[10px] text-stone-400">
@@ -272,6 +308,7 @@ export const ManagerDashboard: React.FC<Props> = ({
       {activeTab === 'ANALYTICS' && (
         <AnalyticsDashboard
           settledTransactions={settledTransactions}
+          language={language}
         />
       )}
 
@@ -625,27 +662,37 @@ export const ManagerDashboard: React.FC<Props> = ({
         </div>
       )}
 
-      {/* TAB 6: SYSTEM AUDIT LOGS (PROTECTED FOR ADMIN ONLY) */}
+      {/* TAB 6: SYSTEM AUDIT LOGS & RLS PERSISTENCE (PROTECTED FOR ADMIN ONLY) */}
       {activeTab === 'AUDIT' && (
         <div className="space-y-4">
           <div className="p-4 rounded-3xl bg-[#1A1A1E] border border-[#282830] space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <span className="text-[10px] font-mono text-[#FF6B00] uppercase font-bold tracking-wider">
-                  SECURITY AUDIT TRAIL
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono text-[#FF6B00] uppercase font-bold tracking-wider">
+                    RLS DATABASE AUDIT TRAIL
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
+                    /server_data/rls_audit_logs.json
+                  </span>
+                </div>
                 <h3 className="text-sm font-bold text-stone-100">
-                  ประวัติระบบและ Audit Logs (แอดมินเท่านั้น)
+                  ประวัติระบบและ RLS Logs จำแนกตามบทบาทและโต๊ะ
                 </h3>
               </div>
-              <span className="text-[10px] text-stone-500 font-mono">
-                {filteredLogs.length} รายการ
-              </span>
+              <button
+                onClick={() => { fetchServerRlsLogs(); audioFeedbackService.playTactileClickSound(); }}
+                disabled={isLoadingLogs}
+                className="btn-tactile-dark px-2.5 py-1.5 rounded-xl text-[10px] font-mono flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <CanvasIcon name="refresh" size={12} color="#FF6B00" animateSpin={isLoadingLogs} />
+                <span>{isLoadingLogs ? 'กำลังโหลด...' : 'รีเฟรช RLS Logs'}</span>
+              </button>
             </div>
 
-            {/* Filter */}
+            {/* Filter buttons */}
             <div className="flex gap-1 overflow-x-auto scrollbar-none py-1">
-              {['ALL', 'CHECK_IN', 'ORDER_PLACED', 'PAYMENT_PENDING', 'CHECK_OUT', 'FAILOVER_RECOVERY'].map((f) => (
+              {['ALL', 'CUSTOMER', 'ADMIN', 'SYSTEM_CRON', 'CHECK_IN', 'CHECK_OUT', 'SLIP_VERIFIED'].map((f) => (
                 <button
                   key={f}
                   onClick={() => { setLogFilter(f); audioFeedbackService.playTactileClickSound(); }}
@@ -658,22 +705,54 @@ export const ManagerDashboard: React.FC<Props> = ({
               ))}
             </div>
 
-            <div className="space-y-1.5 max-h-[50vh] overflow-y-auto scrollbar-none">
-              {filteredLogs.map((log) => (
-                <div key={log.id} className="p-2.5 rounded-xl bg-[#121214] border border-[#282830] space-y-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="px-1.5 py-0.2 rounded bg-[#222228] text-stone-300 font-mono text-[9px] font-bold">
-                      {log.eventType}
-                    </span>
-                    <span className="text-[10px] text-stone-500 font-mono">
-                      {new Date(log.timestamp).toLocaleTimeString('th-TH')}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-stone-300 leading-relaxed font-mono">
-                    {log.message}
-                  </p>
-                </div>
-              ))}
+            {/* Structured RLS Log Entries */}
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto scrollbar-none">
+              {(serverRlsLogs.length > 0 ? serverRlsLogs : filteredLogs)
+                .filter((log: any) => {
+                  if (logFilter === 'ALL') return true;
+                  return log.user_role === logFilter || log.event_type === logFilter || log.eventType === logFilter;
+                })
+                .map((log: any) => {
+                  const role = log.user_role || (log.eventType === 'MAINTENANCE' ? 'ADMIN' : 'CUSTOMER');
+                  const roleBadgeColor = role === 'ADMIN' ? 'text-[#FF6B00] bg-[#FF6B00]/15 border-[#FF6B00]/30' : role === 'SYSTEM_CRON' ? 'text-[#60A5FA] bg-[#60A5FA]/15 border-[#60A5FA]/30' : 'text-[#10B981] bg-[#10B981]/15 border-[#10B981]/30';
+                  const eventType = log.event_type || log.eventType;
+                  const timeStr = log.created_at || log.timestamp;
+
+                  return (
+                    <div key={log.log_id || log.id} className="p-3 rounded-2xl bg-[#121214] border border-[#282830] space-y-1.5 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-[#202028] pb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold border ${roleBadgeColor}`}>
+                            RLS: {role}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-[#202028] text-stone-300 font-mono text-[9px] font-bold">
+                            {eventType}
+                          </span>
+                          {log.table_id && log.table_id !== 'SYSTEM' && (
+                            <span className="text-[10px] text-[#FF8C33] font-mono font-semibold">
+                              โต๊ะ {log.table_id}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-stone-500 font-mono">
+                          {log.client_ip && <span>IP: {log.client_ip}</span>}
+                          <span>{timeStr ? new Date(timeStr).toLocaleTimeString('th-TH') : ''}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-stone-300 leading-relaxed font-sans">
+                        {log.message}
+                      </p>
+
+                      {log.metadata && Object.keys(log.metadata).length > 0 && (
+                        <div className="p-2 rounded-xl bg-[#0B0B0C] text-[10px] font-mono text-stone-400 overflow-x-auto scrollbar-none">
+                          <span className="text-stone-500 block mb-0.5">RLS PAYLOAD METADATA:</span>
+                          <code>{JSON.stringify(log.metadata)}</code>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
