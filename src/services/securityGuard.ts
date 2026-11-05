@@ -68,7 +68,7 @@ export function initSecurityGuard(): void {
     }
   }, { passive: false });
 
-  // 5. DISABLE PINCH-TO-ZOOM GESTURES (iOS Safari & Modern Browsers)
+  // 5. DISABLE PINCH-TO-ZOOM GESTURES (iOS Safari & Modern WebKit)
   document.addEventListener('gesturestart', (e: Event) => {
     e.preventDefault();
   }, { passive: false });
@@ -81,27 +81,11 @@ export function initSecurityGuard(): void {
     e.preventDefault();
   }, { passive: false });
 
-  // 6. DISABLE MULTI-TOUCH PINCH ZOOM ON TOUCH DEVICES
-  document.addEventListener('touchstart', (e: TouchEvent) => {
-    if (e.touches.length > 1) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-
+  // 6. PREVENT PINCH-ZOOM ON MULTI-TOUCH MOVE (Safe: Never intercepts single-tap click events)
   document.addEventListener('touchmove', (e: TouchEvent) => {
-    if (e.touches.length > 1) {
+    if (e.touches && e.touches.length > 1) {
       e.preventDefault();
     }
-  }, { passive: false });
-
-  // 7. DISABLE MOBILE DOUBLE-TAP TO ZOOM
-  let lastTouchEnd = 0;
-  document.addEventListener('touchend', (e: TouchEvent) => {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 300) {
-      e.preventDefault();
-    }
-    lastTouchEnd = now;
   }, { passive: false });
 
   // 8. ANTI-DEVTOOLS CONSOLE CLEANER & WARNING

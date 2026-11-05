@@ -190,36 +190,36 @@ export const TableSelectionScreen: React.FC<Props> = ({
         variant="mobile"
       />
 
-      {/* Check-in Confirmation Modal */}
+      {/* Check-in Confirmation Modal - Optically Centered with Primary Action on the Left */}
       {confirmingTable && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="w-full max-w-sm bg-[#1A1A1E] rounded-t-3xl sm:rounded-2xl border border-[#282830] p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-[#16161C] rounded-3xl border border-[#2A2A38] p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[#22222C] pb-3">
               <div>
                 <span className="text-[10px] font-bold text-[#FF6B00] uppercase tracking-widest font-mono">
                   HMAC-SHA256 CHECK-IN
                 </span>
-                <h3 className="text-base font-bold text-stone-100">
+                <h3 className="text-base font-extrabold text-white mt-0.5">
                   ยืนยันเข้าใช้โต๊ะ {confirmingTable.tableId}
                 </h3>
               </div>
               <button
                 onClick={() => setConfirmingTable(null)}
-                className="w-7 h-7 rounded-full bg-[#121214] text-stone-400 hover:text-stone-100 flex items-center justify-center text-xs cursor-pointer"
+                className="w-7 h-7 rounded-full bg-[#121216] text-stone-400 hover:text-stone-100 flex items-center justify-center border border-[#262632] cursor-pointer active:scale-95 transition-transform"
                 aria-label="ปิด"
               >
-                ✕
+                <CanvasIcon name="close" size={11} color="#A1A1AA" />
               </button>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#121214] border border-[#282830] space-y-2 text-xs">
+            <div className="p-3.5 rounded-2xl bg-[#0F0F13] border border-[#22222C] space-y-2 text-xs">
               <div className="flex justify-between text-stone-300">
                 <span className="text-stone-400">ประเภทโต๊ะ:</span>
                 <span className="font-semibold text-stone-100">{confirmingTable.name}</span>
               </div>
               <div className="flex justify-between text-stone-300">
                 <span className="text-stone-400">โซนที่ตั้ง:</span>
-                <span className="text-[#FF6B00]">{confirmingTable.zone}</span>
+                <span className="text-[#FF6B00] font-medium">{confirmingTable.zone}</span>
               </div>
               <div className="flex justify-between text-stone-300">
                 <span className="text-stone-400">ระบบไฟฟ้า:</span>
@@ -235,19 +235,20 @@ export const TableSelectionScreen: React.FC<Props> = ({
               เมื่อกดยืนยัน ระบบจะผูกโต๊ะนี้เข้ากับเซสชันของคุณและสร้างรหัสลับ 6 หลักประจำรอบการใช้งาน และโต๊ะจะถูกปล่อยเป็นสถานะว่างอัตโนมัติเมื่อทำการชำระเงิน (Checkout) เท่านั้น
             </p>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmingTable(null)}
-                className="btn-tactile-dark flex-1 py-2.5 rounded-xl text-stone-300 text-xs font-semibold min-h-[44px] cursor-pointer"
-              >
-                ยกเลิก
-              </button>
+            {/* Action Buttons: Orange Confirmation Button on the LEFT, Cancel on the RIGHT */}
+            <div className="flex gap-2.5 pt-1">
               <button
                 onClick={handleConfirmLease}
-                className="btn-tactile-orange flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                className="btn-tactile-orange flex-1 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer shadow-lg shadow-[#FF6B00]/25 active:scale-95 transition-all"
               >
                 <CanvasIcon name="key" size={14} color="#0B0B0C" />
                 <span>ยืนยัน Check-in</span>
+              </button>
+              <button
+                onClick={() => setConfirmingTable(null)}
+                className="btn-tactile-dark flex-1 py-3 rounded-2xl text-stone-300 text-xs font-semibold min-h-[44px] cursor-pointer border border-[#262634] hover:bg-[#1E1E28] active:scale-95 transition-all"
+              >
+                ยกเลิก
               </button>
             </div>
           </div>
@@ -263,7 +264,7 @@ export const TableSelectionScreen: React.FC<Props> = ({
               className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#121214] text-stone-400 hover:text-stone-200 flex items-center justify-center text-xs border border-[#282830] cursor-pointer"
               aria-label="ปิด"
             >
-              ✕
+              <CanvasIcon name="close" size={11} color="#A1A1AA" />
             </button>
 
             <div className="flex justify-center pt-2">
@@ -344,22 +345,22 @@ export const TableSelectionScreen: React.FC<Props> = ({
               </span>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => setMyTableDetailModal(null)}
-                className="btn-tactile-dark flex-1 py-2.5 rounded-xl text-stone-300 text-xs font-semibold min-h-[44px] cursor-pointer"
-              >
-                ปิดหน้าต่าง
-              </button>
+            <div className="flex gap-2.5 pt-1">
               <button
                 onClick={() => {
                   setMyTableDetailModal(null);
                   onNavigateToMenu();
                 }}
-                className="btn-tactile-orange flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                className="btn-tactile-orange flex-1 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer shadow-lg shadow-[#FF6B00]/25 active:scale-95 transition-all"
               >
                 <span>สั่งกาแฟที่โต๊ะนี้</span>
                 <CanvasIcon name="arrow-right" size={12} color="#0B0B0C" />
+              </button>
+              <button
+                onClick={() => setMyTableDetailModal(null)}
+                className="btn-tactile-dark flex-1 py-3 rounded-2xl text-stone-300 text-xs font-semibold min-h-[44px] cursor-pointer border border-[#282834] hover:bg-[#20202A] active:scale-95 transition-all"
+              >
+                ปิดหน้าต่าง
               </button>
             </div>
           </div>
@@ -398,22 +399,22 @@ export const TableSelectionScreen: React.FC<Props> = ({
               </div>
             )}
 
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => setBlockedModalMessage(null)}
-                className="btn-tactile-dark flex-1 py-2.5 rounded-xl text-stone-300 text-xs font-semibold min-h-[44px] cursor-pointer"
-              >
-                ปิดหน้าต่าง
-              </button>
+            <div className="flex gap-2.5 pt-1">
               <button
                 onClick={() => {
                   setBlockedModalMessage(null);
                   onNavigateToMenu();
                 }}
-                className="btn-tactile-orange flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                className="btn-tactile-orange flex-1 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer shadow-lg shadow-[#FF6B00]/25 active:scale-95 transition-all"
               >
                 <span>ไปที่โต๊ะปัจจุบัน</span>
                 <CanvasIcon name="arrow-right" size={12} color="#0B0B0C" />
+              </button>
+              <button
+                onClick={() => setBlockedModalMessage(null)}
+                className="btn-tactile-dark flex-1 py-3 rounded-2xl text-stone-300 text-xs font-semibold min-h-[44px] cursor-pointer border border-[#282834] hover:bg-[#20202A] active:scale-95 transition-all"
+              >
+                ปิดหน้าต่าง
               </button>
             </div>
           </div>

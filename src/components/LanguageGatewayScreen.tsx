@@ -83,9 +83,9 @@ export const LanguageGatewayScreen: React.FC<Props> = ({ onLanguageSelected, onS
                 }`}
               >
                 <div className="flex items-center gap-3.5">
-                  <span className="text-2xl flex-shrink-0" role="img" aria-label={opt.name}>
-                    {opt.flag}
-                  </span>
+                  <div className="w-10 h-10 rounded-xl bg-[#1C1C26] border border-[#2A2A38] flex items-center justify-center font-mono font-bold text-xs text-[#FF8C33] flex-shrink-0 shadow-inner">
+                    {opt.code.toUpperCase()}
+                  </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-bold ${isSelected ? 'text-[#FF8C33]' : 'text-white'}`}>

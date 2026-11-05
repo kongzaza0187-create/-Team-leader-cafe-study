@@ -77,11 +77,11 @@ export const TopNavigationBar: React.FC<Props> = ({
   ];
 
   const langFlagMap: Record<AppLanguage, string> = {
-    th: '🇹🇭 TH',
-    en: '🇬🇧 EN',
-    ja: '🇯🇵 JA',
-    pt: '🇵🇹 PT',
-    zh: '🇨🇳 ZH',
+    th: 'TH',
+    en: 'EN',
+    ja: 'JA',
+    pt: 'PT',
+    zh: 'ZH',
   };
 
   return (

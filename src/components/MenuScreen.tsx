@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MenuItem, CartItem, CoffeeTemperature, SweetnessLevel, MilkOption, TableSession, AppLanguage } from '../types';
 import { TRANSLATIONS } from '../i18n/translations';
 import { MENU_CATEGORIES, MENU_ITEMS } from '../data/menuData';
@@ -282,45 +283,48 @@ export const MenuScreen: React.FC<Props> = ({
         })}
       </div>
 
-      {/* Product Customizer Sheet / Modal with Smooth Scrolling & Pinned Action Bar */}
-      {customizingItem && (
+      {/* Product Customizer Sheet / Modal - Rendered via Portal directly to body to avoid header overlap */}
+      {customizingItem && typeof document !== 'undefined' && createPortal(
         <div 
           onClick={handleCloseCustomizer}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in"
+          className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm sm:max-w-md max-h-[85vh] sm:max-h-[88vh] bg-[#1A1A1E] rounded-t-3xl sm:rounded-3xl border border-[#282830] shadow-2xl flex flex-col overflow-hidden text-xs"
+            className="w-full max-w-sm sm:max-w-md max-h-[90vh] bg-[#16161C] rounded-3xl border border-[#2A2A38] shadow-2xl flex flex-col overflow-hidden text-xs animate-in zoom-in-95 duration-200"
           >
-            {/* Modal Fixed Header */}
-            <div className="p-4 sm:p-5 border-b border-[#282830] flex items-start justify-between flex-shrink-0 bg-[#1A1A1E] z-10">
-              <div className="pr-3">
-                <span className="text-[10px] font-mono text-[#FF6B00] uppercase tracking-wider font-bold block mb-0.5">
-                  CUSTOMIZE ORDER
-                </span>
-                <h3 className="text-base font-bold text-stone-100 line-clamp-1">
+            {/* Modal Fixed Header - ALWAYS 100% VISIBLE & NEVER COVERED BY TOP NAV */}
+            <div className="p-4 sm:p-5 border-b border-[#242432] flex items-center justify-between flex-shrink-0 bg-[#16161C] z-10">
+              <div className="pr-3 flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-mono text-[#FF6B00] uppercase tracking-wider font-bold bg-[#FF6B00]/10 px-2 py-0.5 rounded-lg border border-[#FF6B00]/25">
+                    {customizingItem.categoryId.toUpperCase()}
+                  </span>
+                  <span className="text-[10px] text-stone-400 font-mono">ปรับแต่งเมนู</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white truncate">
                   {customizingItem.nameTh}
                 </h3>
-                <span className="text-[11px] text-stone-400 block mt-0.5 line-clamp-1">
+                <span className="text-[11px] text-stone-400 block truncate">
                   {customizingItem.nameEn}
                 </span>
               </div>
               <button
                 onClick={handleCloseCustomizer}
-                className="w-8 h-8 rounded-full bg-[#121214] hover:bg-[#282830] text-stone-400 hover:text-stone-100 flex items-center justify-center border border-[#282830] transition-colors cursor-pointer flex-shrink-0 active:scale-95"
+                className="w-8 h-8 rounded-full bg-[#1F1F28] hover:bg-[#282836] text-stone-300 hover:text-white flex items-center justify-center border border-[#303040] transition-colors cursor-pointer flex-shrink-0 active:scale-95 ml-2"
                 aria-label="ปิด"
               >
-                ✕
+                <CanvasIcon name="close" size={12} color="#A1A1AA" />
               </button>
             </div>
 
             {/* Scrollable Body: with touch scrolling, overscroll-contain, and bottom padding */}
             <div
-              className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 scrollbar-none overscroll-contain pb-28 sm:pb-32"
+              className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 scrollbar-none overscroll-contain pb-6"
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
-              {/* Base64 Product Preview */}
-              <div className="w-full h-36 rounded-2xl overflow-hidden bg-[#121214] border border-[#282830] relative group">
+              {/* Product Preview Image */}
+              <div className="w-full h-40 rounded-2xl overflow-hidden bg-[#0E0E12] border border-[#242432] relative group flex items-center justify-center">
                 <img
                   src={customizingItem.imageBase64 || customizingItem.imageUrl || ''}
                   alt={customizingItem.nameTh}
@@ -524,19 +528,20 @@ export const MenuScreen: React.FC<Props> = ({
             </div>
 
             {/* Sticky Bottom Action Bar (Always visible and reachable) */}
-            <div className="sticky bottom-0 left-0 right-0 p-4 bg-[#1A1A1E]/95 backdrop-blur-md border-t border-[#282830] z-20 pb-8 sm:pb-4 flex-shrink-0">
+            <div className="sticky bottom-0 left-0 right-0 p-4 bg-[#14141A]/95 backdrop-blur-md border-t border-[#242432] z-20 pb-6 sm:pb-4 flex-shrink-0">
               <button
                 onClick={handleConfirmAddToCart}
-                className="btn-tactile-orange w-full py-3.5 rounded-2xl text-xs flex items-center justify-between px-5 cursor-pointer shadow-xl min-h-[48px]"
+                className="btn-tactile-orange w-full py-3.5 rounded-2xl text-xs flex items-center justify-between px-5 cursor-pointer shadow-xl shadow-[#FF6B00]/25 active:scale-95 min-h-[48px] font-bold"
               >
-                <span className="font-bold">เพิ่มลงในตะกร้า</span>
-                <span className="font-mono text-sm font-extrabold bg-[#0B0B0C]/40 px-2.5 py-1 rounded-xl border border-[#FF6B00]/40">
+                <span className="text-stone-950 font-extrabold text-sm">เพิ่มลงในตะกร้า</span>
+                <span className="font-mono text-sm font-extrabold bg-[#0B0B0C]/40 px-3 py-1 rounded-xl border border-[#FF6B00]/40 text-stone-950">
                   ฿{(calculateModalUnitPrice(customizingItem) * quantity).toFixed(2)}
                 </span>
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Added Toast */}

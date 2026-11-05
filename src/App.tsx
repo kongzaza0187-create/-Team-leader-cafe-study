@@ -10,7 +10,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
 import { cafeStore } from './services/cafeStore';
 import { 
   CafeTable, 
@@ -121,7 +120,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Safe Tab Routing Handler (Clears any blocking sheets immediately)
+  // Safe Tab Routing Handler (Clears any blocking sheets immediately and resets scroll smoothly)
   const handleTabChange = (tab: NavigationTab) => {
     setIsCustomizerOpen(false);
     setIsCartOpen(false);
@@ -130,6 +129,9 @@ export default function App() {
     try {
       audioFeedbackService.playTactileClickSound();
     } catch {}
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   };
 
   // Handlers
@@ -254,15 +256,14 @@ export default function App() {
         />
       }
     >
-      {/* Optimized Fluid React Transition Animation (Zero-Lag Architecture) */}
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full"
-      >
-        {activeTab === 'tables' && (
+      {/* Ultra-Fast Persistent View Pool (Zero Re-Mount, Instant 0ms Cycling, Zero RAM/Disk Churn) */}
+      <main className="w-full relative min-h-[500px]">
+        {/* VIEW POOL 1: TABLES SCREEN */}
+        <section
+          id="view-pool-tables"
+          aria-hidden={activeTab !== 'tables'}
+          className={activeTab === 'tables' ? 'block w-full' : 'hidden'}
+        >
           <TableSelectionScreen
             tables={tables}
             activeSession={activeSession}
@@ -270,9 +271,14 @@ export default function App() {
             onSelectAndOccupyTable={handleSelectAndOccupyTable}
             onNavigateToMenu={() => handleTabChange('menu')}
           />
-        )}
+        </section>
 
-        {activeTab === 'menu' && (
+        {/* VIEW POOL 2: MENU & ORDERING SCREEN */}
+        <section
+          id="view-pool-menu"
+          aria-hidden={activeTab !== 'menu'}
+          className={activeTab === 'menu' ? 'block w-full' : 'hidden'}
+        >
           <MenuScreen
             activeSession={activeSession}
             language={selectedLanguage}
@@ -282,9 +288,14 @@ export default function App() {
             cartCount={cartCount}
             onCustomizerStateChange={setIsCustomizerOpen}
           />
-        )}
+        </section>
 
-        {activeTab === 'session' && (
+        {/* VIEW POOL 3: SESSION TIMELINE SCREEN */}
+        <section
+          id="view-pool-session"
+          aria-hidden={activeTab !== 'session'}
+          className={activeTab === 'session' ? 'block w-full' : 'hidden'}
+        >
           <SessionTimelineScreen
             activeSession={activeSession}
             table={currentTable}
@@ -292,9 +303,14 @@ export default function App() {
             onNavigateToMenu={() => handleTabChange('menu')}
             onNavigateToTables={() => handleTabChange('tables')}
           />
-        )}
+        </section>
 
-        {activeTab === 'admin' && (
+        {/* VIEW POOL 4: MANAGER DASHBOARD SCREEN */}
+        <section
+          id="view-pool-admin"
+          aria-hidden={activeTab !== 'admin'}
+          className={activeTab === 'admin' ? 'block w-full' : 'hidden'}
+        >
           <ManagerDashboard
             tables={tables}
             metrics={metrics}
@@ -305,8 +321,8 @@ export default function App() {
             onTriggerFailoverTest={handleTriggerFailover}
             onForceResetTable={handleForceResetTable}
           />
-        )}
-      </motion.div>
+        </section>
+      </main>
 
       {/* Floating Cart Bottom Sheet */}
       <FloatingCartSheet

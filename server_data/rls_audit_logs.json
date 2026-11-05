@@ -1,5 +1,176 @@
 [
   {
+    "log_id": "rls_1793903190826_d9dfaab0",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:26:30.826Z",
+    "table_id": "T01",
+    "session_id": "GUEST_DISCONNECT",
+    "user_role": "ANONYMOUS_GUEST",
+    "event_type": "CHECK_OUT",
+    "client_ip": "127.0.0.1",
+    "user_agent": "curl/7.88.1",
+    "status": "SUCCESS",
+    "message": "Client disconnected on browser exit. Sockets severed: 0. Memory buffers & connection slot immediately freed for other users."
+  },
+  {
+    "log_id": "rls_1793903170113_aa128fee",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:26:10.113Z",
+    "table_id": "SYSTEM",
+    "session_id": "d0e9496f",
+    "user_role": "ADMIN",
+    "event_type": "ADMIN_ACCESS",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "Admin Authentication Success. Session Token Issued."
+  },
+  {
+    "log_id": "rls_1793903113727_49a0e67a",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:25:13.727Z",
+    "table_id": "T01",
+    "session_id": "sess_1793903113132_T01_b739214b",
+    "user_role": "CUSTOMER",
+    "event_type": "CHECK_IN",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "จองและเปิดใช้งานโต๊ะ T01 สำเร็จ รหัสลับ OTP ผูกเซสชัน",
+    "metadata": {
+      "deviceFingerprint": "dev_651c"
+    }
+  },
+  {
+    "log_id": "rls_1793903059393_a54a874d",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:24:19.393Z",
+    "table_id": "SYSTEM",
+    "session_id": "067d04c1",
+    "user_role": "ADMIN",
+    "event_type": "ADMIN_ACCESS",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "Admin Authentication Success. Session Token Issued."
+  },
+  {
+    "log_id": "rls_1793902985715_2e02cff6",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:23:05.715Z",
+    "table_id": "SYSTEM",
+    "session_id": "eb615542",
+    "user_role": "ADMIN",
+    "event_type": "ADMIN_ACCESS",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "Admin Authentication Success. Session Token Issued."
+  },
+  {
+    "log_id": "rls_1793902911492_0326864c",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:21:51.492Z",
+    "table_id": "T02",
+    "session_id": "309254",
+    "user_role": "CUSTOMER",
+    "event_type": "CHECK_OUT",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "บันทึกรายการชำระเงินสำเร็จ ยอดสุทธิ ฿168.00 (ออเดอร์: ORD-906374)",
+    "metadata": {
+      "transactionId": "tx_1793902906374_x8ydd",
+      "amount": 168,
+      "ref1": "D117939029063742499672",
+      "isBot": false
+    }
+  },
+  {
+    "log_id": "rls_1793902911174_a97bfbbe",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:21:51.174Z",
+    "table_id": "T02",
+    "session_id": "AUTO_PURGE",
+    "user_role": "CUSTOMER",
+    "event_type": "CHECK_OUT",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "คืนสถานะโต๊ะ T02 เป็น AVAILABLE สำเร็จ (Checkout/Release)"
+  },
+  {
+    "log_id": "rls_1793902858847_622835f2",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:20:58.847Z",
+    "table_id": "T02",
+    "session_id": "sess_1793902858069_T02_f6c7a22d",
+    "user_role": "CUSTOMER",
+    "event_type": "CHECK_IN",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "จองและเปิดใช้งานโต๊ะ T02 สำเร็จ รหัสลับ OTP ผูกเซสชัน",
+    "metadata": {
+      "deviceFingerprint": "dev_651c"
+    }
+  },
+  {
+    "log_id": "rls_1793902359717_1c537f6c",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:12:39.717Z",
+    "table_id": "SYSTEM",
+    "session_id": "99cecc60",
+    "user_role": "ADMIN",
+    "event_type": "ADMIN_ACCESS",
+    "client_ip": "127.0.0.1",
+    "user_agent": "curl/7.88.1",
+    "status": "SUCCESS",
+    "message": "Admin Authentication Success. Session Token Issued."
+  },
+  {
+    "log_id": "rls_1793902355167_659e9529",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:12:35.167Z",
+    "table_id": "SYSTEM",
+    "session_id": "91768cc9",
+    "user_role": "ADMIN",
+    "event_type": "ADMIN_ACCESS",
+    "client_ip": "127.0.0.1",
+    "user_agent": "curl/7.88.1",
+    "status": "SUCCESS",
+    "message": "Admin Authentication Success. Session Token Issued."
+  },
+  {
+    "log_id": "rls_1793901994353_e96538a2",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:06:34.353Z",
+    "table_id": "SYSTEM",
+    "session_id": "dd4abd4c",
+    "user_role": "ADMIN",
+    "event_type": "ADMIN_ACCESS",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "Admin Authentication Success. Session Token Issued."
+  },
+  {
+    "log_id": "rls_1793901861366_0fcd1903",
+    "tenant_id": "lumina_cafe_main",
+    "created_at": "2026-11-05T18:04:21.367Z",
+    "table_id": "T01",
+    "session_id": "sess_1793901860783_T01_1ee06be7",
+    "user_role": "CUSTOMER",
+    "event_type": "CHECK_IN",
+    "client_ip": "2001:44c8:4320:7c18:cf1f:3cd4:94ad:d4e5",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "status": "SUCCESS",
+    "message": "จองและเปิดใช้งานโต๊ะ T01 สำเร็จ รหัสลับ OTP ผูกเซสชัน",
+    "metadata": {
+      "deviceFingerprint": "dev_651c"
+    }
+  },
+  {
     "log_id": "rls_1793783341150_d4e10873",
     "tenant_id": "lumina_cafe_main",
     "created_at": "2026-11-04T09:09:01.150Z",

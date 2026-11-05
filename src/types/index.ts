@@ -186,11 +186,24 @@ export interface BotSimulationStatus {
 
 export interface NodeHealth {
   name: string;
-  type: 'Auth Node' | 'Order Gateway Node' | 'WebSocket Node' | 'Slip Verifier Engine';
+  type: string;
   status: 'HEALTHY' | 'DEGRADED' | 'RECOVERING' | 'OFFLINE';
   latencyMs: number;
   uptime: string;
   port: number;
+  region?: string;
+  algorithm?: string;
+  weight?: number;
+  activeConns?: number;
+  rps?: number;
+}
+
+export interface AntiBotProtectionMetrics {
+  totalBlockedBots: number;
+  quarantinedIpsCount: number;
+  activeMitigationMode: string;
+  lastBlockedReason: string;
+  spamFilterAccuracy: number;
 }
 
 export interface ConcurrencyMetrics {
@@ -202,6 +215,7 @@ export interface ConcurrencyMetrics {
   isAutoRecovering: boolean;
   failoverRemainingSec: number;
   nodes: NodeHealth[];
+  antiBot?: AntiBotProtectionMetrics;
 }
 
 export interface RevenueAnalytics {

@@ -66,8 +66,8 @@ export const MobileFrame: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Scrollable Main Content Area with Protected Netlify Badge Padding (pb-32) */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 scrollbar-none pb-32">
+        {/* Scrollable Main Content Area with Protected Bottom Padding (pb-32) */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none pb-32">
           {children}
         </main>
       </div>

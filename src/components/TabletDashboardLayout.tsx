@@ -462,7 +462,7 @@ export const TabletDashboardLayout: React.FC<Props> = ({
                   : 'text-stone-400 hover:text-stone-200'
               }`}
             >
-              <span>📱</span>
+              <CanvasIcon name="table" size={13} color={currentOrientation === 'portrait' ? '#0B0B0C' : '#A1A1AA'} />
               <span className="whitespace-nowrap">แนวตั้ง (Portrait)</span>
             </button>
             <button
@@ -477,7 +477,7 @@ export const TabletDashboardLayout: React.FC<Props> = ({
                   : 'text-stone-400 hover:text-stone-200'
               }`}
             >
-              <span>💻</span>
+              <CanvasIcon name="chart" size={13} color={currentOrientation === 'landscape' ? '#0B0B0C' : '#A1A1AA'} />
               <span className="whitespace-nowrap">แนวนอน (Landscape)</span>
             </button>
           </div>
@@ -510,7 +510,7 @@ export const TabletDashboardLayout: React.FC<Props> = ({
 
           {language && (
             <div className="pill-embossed-dark px-2.5 py-1.5 rounded-xl text-xs font-bold text-stone-200 font-mono flex items-center gap-1.5 border border-[#282830]">
-              <span>{({ th: '🇹🇭 TH', en: '🇬🇧 EN', ja: '🇯🇵 JA', pt: '🇵🇹 PT', zh: '🇨🇳 ZH' } as Record<AppLanguage, string>)[language]}</span>
+              <span>{({ th: 'TH', en: 'EN', ja: 'JA', pt: 'PT', zh: 'ZH' } as Record<AppLanguage, string>)[language]}</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
             </div>
           )}
@@ -838,9 +838,10 @@ export const TabletDashboardLayout: React.FC<Props> = ({
               </div>
               <button
                 onClick={() => setIsPortraitCompanionOpen(false)}
-                className="w-8 h-8 rounded-full bg-[#1A1A22] text-stone-400 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 text-sm font-bold"
+                className="w-8 h-8 rounded-full bg-[#1A1A22] text-stone-400 hover:text-white flex items-center justify-center cursor-pointer active:scale-95"
+                aria-label="ปิด"
               >
-                ✕
+                <CanvasIcon name="close" size={12} color="#A1A1AA" />
               </button>
             </div>
 
@@ -866,18 +867,19 @@ export const TabletDashboardLayout: React.FC<Props> = ({
               </h3>
               <p className="text-xs text-stone-400 mt-0.5">{confirmingTable.zone}</p>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmingTable(null)}
-                className="btn-tactile-dark flex-1 py-2.5 rounded-xl text-xs font-semibold"
-              >
-                ยกเลิก
-              </button>
+            <div className="flex gap-2.5 pt-1">
               <button
                 onClick={handleConfirmLease}
-                className="btn-tactile-orange flex-1 py-2.5 rounded-xl text-xs font-bold"
+                className="btn-tactile-orange flex-1 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-[#FF6B00]/25 active:scale-95 transition-all cursor-pointer"
               >
-                ยืนยันเข้าใช้งาน
+                <CanvasIcon name="key" size={14} color="#0B0B0C" />
+                <span>ยืนยันเข้าใช้งาน</span>
+              </button>
+              <button
+                onClick={() => setConfirmingTable(null)}
+                className="btn-tactile-dark flex-1 py-3 rounded-2xl text-xs font-semibold border border-[#282834] hover:bg-[#20202A] active:scale-95 transition-all cursor-pointer"
+              >
+                ยกเลิก
               </button>
             </div>
           </div>
@@ -923,9 +925,10 @@ export const TabletDashboardLayout: React.FC<Props> = ({
               <h3 className="text-sm font-bold text-white">{customizingItem.nameTh}</h3>
               <button
                 onClick={() => setCustomizingItem(null)}
-                className="w-7 h-7 rounded-full bg-[#121214] text-stone-400 hover:text-white flex items-center justify-center"
+                className="w-7 h-7 rounded-full bg-[#121214] text-stone-400 hover:text-white flex items-center justify-center cursor-pointer"
+                aria-label="ปิด"
               >
-                ✕
+                <CanvasIcon name="close" size={11} color="#A1A1AA" />
               </button>
             </div>
 
